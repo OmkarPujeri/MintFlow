@@ -1,0 +1,751 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
+import '../formatters.dart';
+import '../models/campaign.dart';
+import '../theme.dart';
+import '../widgets/page_header.dart';
+import '../widgets/section_card.dart';
+
+/// Editable draft for a single interaction (owns its text controllers).
+class _InteractionDraft {
+  _InteractionDraft({
+    required this.type,
+    String question = '',
+    String options = 'Option A, Option B, Option C',
+  })  : question = TextEditingController(text: question),
+        options = TextEditingController(text: options);
+
+  InteractionType type;
+  final TextEditingController question;
+  final TextEditingController options;
+
+  void dispose() {
+    question.dispose();
+    options.dispose();
+  }
+}
+
+class CreateCampaignPage extends StatefulWidget {
+  const CreateCampaignPage({
+    super.key,
+    this.existing,
+    required this.onCreate,
+    required this.onUpdate,
+    this.onCancel,
+  });
+
+  final Campaign? existing;
+  final Future<void> Function(Campaign campaign) onCreate;
+  final Future<void> Function(Campaign campaign) onUpdate;
+  final VoidCallback? onCancel;
+
+  @override
+  State<CreateCampaignPage> createState() => _CreateCampaignPageState();
+}
+
+class _CreateCampaignPageState extends State<CreateCampaignPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _name;
+  late final TextEditingController _description;
+  late final TextEditingController _youtubeUrl;
+  late final TextEditingController _budget;
+  late final TextEditingController _reward;
+
+  final List<_InteractionDraft> _interactions = [];
+  late DateTime _startDate;
+  late DateTime _endDate;
+  late CampaignStatus _status;
+  bool _saving = false;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    _name = TextEditingController(text: existing?.name ?? '');
+    _description = TextEditingController(text: existing?.description ?? '');
+    _youtubeUrl = TextEditingController(text: existing?.youtubeUrl ?? '');
+    _budget = TextEditingController(
+      text: existing?.budget.toStringAsFixed(0) ?? '1000',
+    );
+    _reward = TextEditingController(
+      text: existing?.rewardPerCompletion.toStringAsFixed(0) ?? '2',
+    );
+
+    if (existing != null && existing.interactions.isNotEmpty) {
+      for (final it in existing.interactions) {
+        _interactions.add(
+          _InteractionDraft(
+            type: it.type,
+            question: it.question,
+            options: it.options.join(', '),
+          ),
+        );
+      }
+    } else {
+      _interactions.add(_InteractionDraft(type: InteractionType.quiz));
+    }
+
+    final now = DateTime.now();
+    _startDate = existing?.startDate ?? now;
+    _endDate = existing?.endDate ?? now.add(const Duration(days: 21));
+    _status = existing != null && existing.status == CampaignStatus.draft
+        ? CampaignStatus.draft
+        : CampaignStatus.active;
+
+    _name.addListener(_refresh);
+    _youtubeUrl.addListener(_refresh);
+    _reward.addListener(_refresh);
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _description.dispose();
+    _youtubeUrl.dispose();
+    _budget.dispose();
+    _reward.dispose();
+    for (final it in _interactions) {
+      it.dispose();
+    }
+    super.dispose();
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  void _addInteraction() {
+    setState(() {
+      _interactions.add(_InteractionDraft(type: InteractionType.survey));
+    });
+  }
+
+  void _removeInteraction(int index) {
+    setState(() {
+      _interactions.removeAt(index).dispose();
+    });
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final initial = isStart ? _startDate : _endDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2030),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        _startDate = picked;
+        if (_endDate.isBefore(_startDate)) {
+          _endDate = _startDate.add(const Duration(days: 1));
+        }
+      } else {
+        _endDate = picked.isBefore(_startDate)
+            ? _startDate.add(const Duration(days: 1))
+            : picked;
+      }
+    });
+  }
+
+  List<CampaignInteraction> _buildInteractions() {
+    return _interactions.map((draft) {
+      final options = draft.type == InteractionType.feedback
+          ? <String>[]
+          : draft.options.text
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
+      return CampaignInteraction(
+        type: draft.type,
+        question: draft.question.text.trim(),
+        options: options,
+        correctAnswer:
+            draft.type == InteractionType.quiz && options.isNotEmpty
+                ? options.first
+                : null,
+      );
+    }).toList();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+
+    final interactions = _buildInteractions();
+    if (_isEditing) {
+      final updated = widget.existing!.copyWith(
+        name: _name.text.trim(),
+        description: _description.text.trim(),
+        youtubeUrl: _youtubeUrl.text.trim(),
+        youtubeVideoId: extractYouTubeVideoId(_youtubeUrl.text.trim())!,
+        budget: double.parse(_budget.text),
+        rewardPerCompletion: double.parse(_reward.text),
+        startDate: _startDate,
+        endDate: _endDate,
+        status: _status,
+        interactions: interactions,
+      );
+      await widget.onUpdate(updated);
+    } else {
+      final now = DateTime.now();
+      final campaign = Campaign(
+        id: 'campaign-${now.microsecondsSinceEpoch}',
+        name: _name.text.trim(),
+        description: _description.text.trim(),
+        youtubeUrl: _youtubeUrl.text.trim(),
+        youtubeVideoId: extractYouTubeVideoId(_youtubeUrl.text.trim())!,
+        budget: double.parse(_budget.text),
+        rewardPerCompletion: double.parse(_reward.text),
+        startDate: _startDate,
+        endDate: _endDate,
+        status: _status,
+        interactions: interactions,
+        views: 0,
+        completions: 0,
+        createdAt: now,
+      );
+      await widget.onCreate(campaign);
+    }
+    if (mounted) setState(() => _saving = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PageHeader(
+          title: _isEditing ? 'Edit Campaign' : 'Create Campaign',
+          subtitle:
+              'Paste a YouTube URL, define reward economics, schedule, and viewer tasks.',
+          trailing: widget.onCancel != null
+              ? OutlinedButton(
+                  onPressed: widget.onCancel,
+                  child: const Text('Cancel'),
+                )
+              : null,
+        ),
+        const SizedBox(height: 22),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth > 860;
+            final form = _buildForm(context);
+            final preview = _MobilePreview(
+              interaction: _interactions.first,
+              name: _name,
+              reward: _reward,
+              youtubeUrl: _youtubeUrl,
+            );
+            if (!wide) {
+              return Column(
+                children: [form, const SizedBox(height: 18), preview],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: form),
+                const SizedBox(width: 18),
+                SizedBox(width: 340, child: preview),
+              ],
+            );
+          },
+        ),
+      ],
+    ).animate().fadeIn(duration: AppMotion.medium);
+  }
+
+  Widget _buildForm(BuildContext context) {
+    return SectionCard(
+      padding: const EdgeInsets.all(26),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionLabel('Campaign details'),
+            TextFormField(
+              controller: _name,
+              decoration: const InputDecoration(
+                labelText: 'Campaign name',
+                prefixIcon: Icon(Icons.campaign_outlined),
+              ),
+              validator: _required,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _description,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                prefixIcon: Icon(Icons.notes_outlined),
+              ),
+              validator: _required,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _youtubeUrl,
+              decoration: const InputDecoration(
+                labelText: 'YouTube video URL',
+                helperText:
+                    'Supports youtube.com/watch, youtu.be, Shorts, and embed URLs.',
+                prefixIcon: Icon(Icons.play_circle_outline),
+              ),
+              validator: _youtubeUrlValidator,
+            ),
+            const SizedBox(height: 24),
+            const _SectionLabel('Reward economics'),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _budget,
+                    decoration: const InputDecoration(
+                      labelText: 'Budget (Rs.)',
+                      prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: _number,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TextFormField(
+                    controller: _reward,
+                    decoration: const InputDecoration(
+                      labelText: 'Reward / completion',
+                      prefixIcon: Icon(Icons.payments_outlined),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: _number,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const _SectionLabel('Schedule'),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateField(
+                    label: 'Start date',
+                    value: _startDate,
+                    onTap: () => _pickDate(isStart: true),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _DateField(
+                    label: 'End date',
+                    value: _endDate,
+                    onTap: () => _pickDate(isStart: false),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                const Expanded(child: _SectionLabel('Viewer tasks')),
+                TextButton.icon(
+                  onPressed: _addInteraction,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add task'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            for (var i = 0; i < _interactions.length; i++)
+              _InteractionEditor(
+                key: ObjectKey(_interactions[i]),
+                index: i,
+                draft: _interactions[i],
+                canRemove: _interactions.length > 1,
+                onTypeChanged: (type) =>
+                    setState(() => _interactions[i].type = type),
+                onRemove: () => _removeInteraction(i),
+                validateRequired: _required,
+              ),
+            const SizedBox(height: 8),
+            SegmentedButton<CampaignStatus>(
+              segments: const [
+                ButtonSegment(
+                  value: CampaignStatus.active,
+                  label: Text('Publish'),
+                  icon: Icon(Icons.public),
+                ),
+                ButtonSegment(
+                  value: CampaignStatus.draft,
+                  label: Text('Save Draft'),
+                  icon: Icon(Icons.drafts_outlined),
+                ),
+              ],
+              selected: {_status},
+              onSelectionChanged: (value) =>
+                  setState(() => _status = value.first),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _submit,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(
+                        _isEditing
+                            ? Icons.save_outlined
+                            : Icons.rocket_launch_outlined,
+                      ),
+                label: Text(_isEditing ? 'Save Changes' : 'Create Campaign'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _required(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required';
+    return null;
+  }
+
+  String? _number(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required';
+    final number = double.tryParse(value);
+    if (number == null || number <= 0) return 'Enter a positive number';
+    return null;
+  }
+
+  String? _youtubeUrlValidator(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required';
+    if (extractYouTubeVideoId(value) == null) {
+      return 'Enter a valid YouTube video URL';
+    }
+    return null;
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          color: AppColors.faint,
+          fontWeight: FontWeight.w800,
+          fontSize: 11.5,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  const _DateField({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final DateTime value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadii.control),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.event_outlined),
+        ),
+        child: Text(formatDate(value)),
+      ),
+    );
+  }
+}
+
+class _InteractionEditor extends StatelessWidget {
+  const _InteractionEditor({
+    super.key,
+    required this.index,
+    required this.draft,
+    required this.canRemove,
+    required this.onTypeChanged,
+    required this.onRemove,
+    required this.validateRequired,
+  });
+
+  final int index;
+  final _InteractionDraft draft;
+  final bool canRemove;
+  final ValueChanged<InteractionType> onTypeChanged;
+  final VoidCallback onRemove;
+  final String? Function(String?) validateRequired;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.panelAlt,
+        borderRadius: BorderRadius.circular(AppRadii.control),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Task ${index + 1}',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              if (canRemove)
+                IconButton(
+                  onPressed: onRemove,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: AppColors.danger,
+                  ),
+                  tooltip: 'Remove task',
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<InteractionType>(
+            initialValue: draft.type,
+            decoration: const InputDecoration(
+              labelText: 'Interaction type',
+              prefixIcon: Icon(Icons.fact_check_outlined),
+            ),
+            items: InteractionType.values
+                .map(
+                  (type) => DropdownMenuItem(
+                    value: type,
+                    child: Text(type.label),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) => onTypeChanged(value!),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: draft.question,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Question or feedback prompt',
+              prefixIcon: Icon(Icons.help_outline),
+            ),
+            validator: validateRequired,
+          ),
+          if (draft.type != InteractionType.feedback) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: draft.options,
+              decoration: InputDecoration(
+                labelText: 'Options, comma separated',
+                helperText: draft.type == InteractionType.quiz
+                    ? 'The first option is treated as the correct answer.'
+                    : null,
+                prefixIcon: const Icon(Icons.list_alt_outlined),
+              ),
+              validator: validateRequired,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MobilePreview extends StatelessWidget {
+  const _MobilePreview({
+    required this.interaction,
+    required this.name,
+    required this.reward,
+    required this.youtubeUrl,
+  });
+
+  final _InteractionDraft interaction;
+  final TextEditingController name;
+  final TextEditingController reward;
+  final TextEditingController youtubeUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final videoId = extractYouTubeVideoId(youtubeUrl.text);
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.smartphone, size: 18, color: AppColors.mintDark),
+              const SizedBox(width: 8),
+              Text(
+                'Viewer Preview',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 520,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F1713),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 30,
+                  offset: const Offset(0, 18),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(11),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Container(
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        alignment: Alignment.bottomLeft,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF3CD189),
+                              Color(0xFF16A066),
+                              Color(0xFF0A2A20),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.play_circle_fill,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'YouTube Embedded Video',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              videoId ?? 'Paste a YouTube URL',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name.text.isEmpty ? 'Campaign title' : name.text,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ListenableBuilder(
+                            listenable: interaction.question,
+                            builder: (context, _) => Text(
+                              interaction.question.text.isEmpty
+                                  ? 'Viewer task question appears here.'
+                                  : interaction.question.text,
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.mintSoft,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              interaction.type.label,
+                              style: const TextStyle(
+                                color: AppColors.mintDark,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: () {},
+                              child: Text(
+                                'Complete & Earn Rs. ${reward.text.isEmpty ? '2' : reward.text}',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

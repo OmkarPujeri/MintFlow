@@ -1,0 +1,9 @@
+{
+  "name": "MintFlow Dashboard",
+  "short_name": "MintFlow",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F6F8F4",
+  "theme_color": "#16A066",
+  "description": "Company campaign control center for MintFlow."
+}
