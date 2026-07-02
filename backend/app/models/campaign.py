@@ -1,0 +1,40 @@
+import uuid
+import enum
+from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.db.database import Base
+
+
+class CampaignStatus(str, enum.Enum):
+    draft = "draft"
+    active = "active"
+    paused = "paused"
+    completed = "completed"
+
+
+class Campaign(Base):
+    __tablename__ = "campaigns"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_admin_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+
+    # Video fields — aligned with Flutter frontend model
+    youtube_url = Column(String(500), nullable=True)         # full YouTube URL (any format)
+    youtube_video_id = Column(String(20), nullable=True)     # extracted 11-char video ID
+
+    total_budget = Column(Numeric(12, 2), nullable=False)
+    remaining_budget = Column(Numeric(12, 2), nullable=False)
+    reward_per_view = Column(Numeric(8, 2), nullable=False, default=2.00)
+    status = Column(SAEnum(CampaignStatus), default=CampaignStatus.draft, nullable=False)
+    start_date = Column(DateTime(timezone=True), nullable=True)
+    end_date = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    company_admin = relationship("User", backref="campaigns")
+    interactions = relationship("CampaignInteraction", back_populates="campaign", cascade="all, delete-orphan")
+    watch_sessions = relationship("WatchSession", back_populates="campaign")

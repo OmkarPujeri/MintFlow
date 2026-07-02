@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'models/company_admin.dart';
 import 'pages/login_page.dart';
 import 'repositories/analytics_repository.dart';
+import 'repositories/api_client.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/campaign_repository.dart';
 import 'repositories/local_storage.dart';
@@ -23,6 +24,7 @@ class MintFlowDashboardApp extends StatefulWidget {
 
 class _MintFlowDashboardAppState extends State<MintFlowDashboardApp> {
   late final LocalStorage _storage;
+  late final ApiClient _apiClient;
   late final AuthRepository _authRepository;
   late final CampaignRepository _campaignRepository;
   late final AnalyticsRepository _analyticsRepository;
@@ -35,19 +37,26 @@ class _MintFlowDashboardAppState extends State<MintFlowDashboardApp> {
   void initState() {
     super.initState();
     _storage = LocalStorage();
-    _authRepository = AuthRepository(_storage);
-    _campaignRepository = CampaignRepository(_storage);
+    _apiClient = ApiClient(_storage);
+    _authRepository = AuthRepository(_storage, _apiClient);
+    _campaignRepository = CampaignRepository(_apiClient);
     _analyticsRepository = AnalyticsRepository();
     _restoreSession();
   }
 
   DashboardController _buildController(CompanyAdmin admin) {
-    return DashboardController(
+    final controller = DashboardController(
       campaignRepository: _campaignRepository,
       analyticsRepository: _analyticsRepository,
       authRepository: _authRepository,
       admin: admin,
-    )..load();
+    );
+    controller.addListener(() {
+      if (controller.error != null && controller.error!.contains('ApiException(401)')) {
+        _logout();
+      }
+    });
+    return controller..load();
   }
 
   Future<void> _restoreSession() async {

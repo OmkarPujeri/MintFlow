@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../models/campaign.dart';
 import '../models/company_admin.dart';
@@ -340,21 +341,12 @@ class _Logo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mark = Container(
+    final mark = SizedBox(
       width: 42,
       height: 42,
-      decoration: BoxDecoration(
-        gradient: AppColors.brandGradient,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.mint.withValues(alpha: 0.35),
-            blurRadius: 14,
-            offset: const Offset(0, 8),
-          ),
-        ],
+      child: SvgPicture.asset(
+        'assets/brand_logo.svg',
       ),
-      child: const Icon(Icons.bolt, color: Colors.white),
     );
     if (compact) return mark;
     return Row(

@@ -1,14 +1,16 @@
 import 'dart:convert';
 
 import '../models/company_admin.dart';
+import 'api_client.dart';
 import 'local_storage.dart';
 
 class AuthRepository {
-  AuthRepository(this._storage);
+  AuthRepository(this._storage, this._api);
 
   static const _sessionKey = 'mintflow.company_admin.session';
 
   final LocalStorage _storage;
+  final ApiClient _api;
 
   Future<CompanyAdmin?> currentAdmin() async {
     final session = _storage.read(_sessionKey);
@@ -17,22 +19,27 @@ class AuthRepository {
   }
 
   Future<CompanyAdmin> login(String email, String password) async {
+    final response = await _api.post('/api/v1/auth/login', body: {
+      'email': email.trim(),
+      'password': password,
+    });
+
+    // Save JWT token for all future API calls
+    _api.saveToken(response['access_token'] as String);
+
     final admin = CompanyAdmin(
-      id: 'admin-demo',
-      name: 'Demo Company Admin',
-      email: email.trim().isEmpty ? 'admin@mintflow.app' : email.trim(),
-      companyName: 'MintFlow Demo Brand',
+      id: response['id'] as String,
+      name: response['name'] as String? ?? 'Company Admin',
+      email: response['email'] as String,
+      companyName: response['companyName'] as String? ?? 'My Brand',
     );
     _storage.write(_sessionKey, jsonEncode(admin.toJson()));
     return admin;
   }
 
-  /// Sign in with Google.
-  ///
-  /// Currently creates a demo session so the flow is fully usable without
-  /// OAuth credentials. To go live: use the `google_sign_in` package to obtain
-  /// the Google ID token, POST it to `/auth/google` on the backend, and build
-  /// the [CompanyAdmin] from the verified response instead of the values here.
+  /// Google Sign-In — still demo for now.
+  /// To go live: obtain Google ID token, POST to /api/v1/auth/google, 
+  /// then call _api.saveToken() with the returned access_token.
   Future<CompanyAdmin> loginWithGoogle({
     String? name,
     String? email,
@@ -54,6 +61,12 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
+    try {
+      await _api.post('/api/v1/auth/logout');
+    } catch (_) {
+      // Logout even if backend call fails
+    }
+    _api.clearToken();
     _storage.remove(_sessionKey);
   }
 }

@@ -1,0 +1,41 @@
+from pydantic import BaseModel, EmailStr
+
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+    role: str = "company_admin"          # "company_admin" | "viewer"
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class RegisterResponse(BaseModel):
+    id: str
+    email: str
+    role: str
+    message: str
+
+
+class LoginResponse(BaseModel):
+    """
+    Response shape matching Flutter's expectations.
+    Frontend stores access_token in ApiClient (mintflow.auth.token key).
+    CompanyAdmin fields (id, name, email, companyName) are used to build
+    the CompanyAdmin model stored in session storage.
+    """
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    # CompanyAdmin fields for Flutter frontend
+    id: str                               # maps to CompanyAdmin.id
+    email: str                            # maps to CompanyAdmin.email
+    name: str = "Company Admin"           # maps to CompanyAdmin.name
+    companyName: str = "My Brand"         # maps to CompanyAdmin.companyName
+    role: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str

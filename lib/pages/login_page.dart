@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme.dart';
 import '../widgets/section_card.dart';
@@ -79,7 +80,11 @@ class _LoginPageState extends State<LoginPage> {
                       )
                     : Row(
                         children: [
-                          const Expanded(child: _HeroPanel()),
+                          const Expanded(
+                            child: SingleChildScrollView(
+                              child: _HeroPanel(),
+                            ),
+                          ),
                           const SizedBox(width: 40),
                           SizedBox(
                             width: 420,
@@ -116,21 +121,12 @@ class _HeroPanel extends StatelessWidget {
       children: [
         Row(
           children: [
-            Container(
+            SizedBox(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(
-                gradient: AppColors.brandGradient,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.mint.withValues(alpha: 0.4),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+              child: SvgPicture.asset(
+                'assets/brand_logo.svg',
               ),
-              child: const Icon(Icons.bolt, color: Colors.white, size: 26),
             ),
             const SizedBox(width: 14),
             const Text(
