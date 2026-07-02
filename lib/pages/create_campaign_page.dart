@@ -6,6 +6,7 @@ import '../models/campaign.dart';
 import '../theme.dart';
 import '../widgets/page_header.dart';
 import '../widgets/section_card.dart';
+import '../widgets/youtube_player_widget.dart';
 
 /// Editable draft for a single interaction (owns its text controllers).
 class _InteractionDraft {
@@ -51,6 +52,13 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   late final TextEditingController _youtubeUrl;
   late final TextEditingController _budget;
   late final TextEditingController _reward;
+  late final TextEditingController _ctaUrl;
+  late final TextEditingController _ctaButtonText;
+  late String _targetGender;
+  late final TextEditingController _targetAgeMin;
+  late final TextEditingController _targetAgeMax;
+  late final TextEditingController _targetLocations;
+  late final TextEditingController _targetInterests;
 
   final List<_InteractionDraft> _interactions = [];
   late DateTime _startDate;
@@ -72,6 +80,21 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     );
     _reward = TextEditingController(
       text: existing?.rewardPerCompletion.toStringAsFixed(0) ?? '2',
+    );
+    _ctaUrl = TextEditingController(text: existing?.ctaUrl ?? '');
+    _ctaButtonText = TextEditingController(text: existing?.ctaButtonText ?? 'Learn More');
+    _targetGender = existing?.targetGender ?? 'all';
+    _targetAgeMin = TextEditingController(
+      text: existing?.targetAgeMin?.toString() ?? '18',
+    );
+    _targetAgeMax = TextEditingController(
+      text: existing?.targetAgeMax?.toString() ?? '65',
+    );
+    _targetLocations = TextEditingController(
+      text: existing?.targetLocations.join(', ') ?? '',
+    );
+    _targetInterests = TextEditingController(
+      text: existing?.targetInterests.join(', ') ?? '',
     );
 
     if (existing != null && existing.interactions.isNotEmpty) {
@@ -98,6 +121,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _name.addListener(_refresh);
     _youtubeUrl.addListener(_refresh);
     _reward.addListener(_refresh);
+    _ctaUrl.addListener(_refresh);
+    _ctaButtonText.addListener(_refresh);
+    _targetLocations.addListener(_refresh);
+    _targetInterests.addListener(_refresh);
   }
 
   @override
@@ -107,6 +134,12 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _youtubeUrl.dispose();
     _budget.dispose();
     _reward.dispose();
+    _ctaUrl.dispose();
+    _ctaButtonText.dispose();
+    _targetAgeMin.dispose();
+    _targetAgeMax.dispose();
+    _targetLocations.dispose();
+    _targetInterests.dispose();
     for (final it in _interactions) {
       it.dispose();
     }
@@ -190,6 +223,21 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         endDate: _endDate,
         status: _status,
         interactions: interactions,
+        ctaUrl: _ctaUrl.text.trim().isEmpty ? null : _ctaUrl.text.trim(),
+        ctaButtonText: _ctaButtonText.text.trim(),
+        targetGender: _targetGender,
+        targetAgeMin: int.tryParse(_targetAgeMin.text),
+        targetAgeMax: int.tryParse(_targetAgeMax.text),
+        targetLocations: _targetLocations.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList(),
+        targetInterests: _targetInterests.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList(),
       );
       await widget.onUpdate(updated);
     } else {
@@ -209,6 +257,21 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         views: 0,
         completions: 0,
         createdAt: now,
+        ctaUrl: _ctaUrl.text.trim().isEmpty ? null : _ctaUrl.text.trim(),
+        ctaButtonText: _ctaButtonText.text.trim(),
+        targetGender: _targetGender,
+        targetAgeMin: int.tryParse(_targetAgeMin.text),
+        targetAgeMax: int.tryParse(_targetAgeMax.text),
+        targetLocations: _targetLocations.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList(),
+        targetInterests: _targetInterests.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList(),
       );
       await widget.onCreate(campaign);
     }
@@ -241,6 +304,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               name: _name,
               reward: _reward,
               youtubeUrl: _youtubeUrl,
+              ctaUrl: _ctaUrl,
+              ctaButtonText: _ctaButtonText,
             );
             if (!wide) {
               return Column(
@@ -592,16 +657,19 @@ class _MobilePreview extends StatelessWidget {
     required this.name,
     required this.reward,
     required this.youtubeUrl,
+    required this.ctaUrl,
+    required this.ctaButtonText,
   });
 
   final _InteractionDraft interaction;
   final TextEditingController name;
   final TextEditingController reward;
   final TextEditingController youtubeUrl;
+  final TextEditingController ctaUrl;
+  final TextEditingController ctaButtonText;
 
   @override
   Widget build(BuildContext context) {
-    final videoId = extractYouTubeVideoId(youtubeUrl.text);
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,48 +706,59 @@ class _MobilePreview extends StatelessWidget {
                 child: Column(
                   children: [
                     Expanded(
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(18),
-                        alignment: Alignment.bottomLeft,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF3CD189),
-                              Color(0xFF16A066),
-                              Color(0xFF0A2A20),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.play_circle_fill,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              'YouTube Embedded Video',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
+                      child: ListenableBuilder(
+                        listenable: youtubeUrl,
+                        builder: (context, _) {
+                          final videoId = extractYouTubeVideoId(youtubeUrl.text.trim());
+                          if (videoId != null && videoId.isNotEmpty) {
+                            return YoutubePlayerWidget(
+                              videoId: videoId,
+                              aspectRatio: 16 / 9,
+                            );
+                          }
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(18),
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xFF3CD189),
+                                  Color(0xFF16A066),
+                                  Color(0xFF0A2A20),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              videoId ?? 'Paste a YouTube URL',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
+                            child: const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.play_circle_fill,
+                                  color: Colors.white,
+                                  size: 40,
+                                ),
+                                SizedBox(height: 10),
+                                Text(
+                                  'YouTube Preview',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Paste a YouTube URL to preview',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ),
                     Padding(
@@ -687,11 +766,14 @@ class _MobilePreview extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            name.text.isEmpty ? 'Campaign title' : name.text,
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
+                          ListenableBuilder(
+                            listenable: name,
+                            builder: (context, _) => Text(
+                              name.text.isEmpty ? 'Campaign title' : name.text,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -729,12 +811,39 @@ class _MobilePreview extends StatelessWidget {
                           const SizedBox(height: 14),
                           SizedBox(
                             width: double.infinity,
-                            child: FilledButton(
-                              onPressed: () {},
-                              child: Text(
-                                'Complete & Earn Rs. ${reward.text.isEmpty ? '2' : reward.text}',
+                            child: ListenableBuilder(
+                              listenable: reward,
+                              builder: (context, _) => FilledButton(
+                                onPressed: () {},
+                                child: Text(
+                                  'Complete & Earn Rs. ${reward.text.isEmpty ? '2' : reward.text}',
+                                ),
                               ),
                             ),
+                          ),
+                          ListenableBuilder(
+                            listenable: ctaUrl,
+                            builder: (context, _) {
+                              if (ctaUrl.text.trim().isEmpty) return const SizedBox();
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: ListenableBuilder(
+                                    listenable: ctaButtonText,
+                                    builder: (context, _) => OutlinedButton.icon(
+                                      onPressed: () {},
+                                      icon: const Icon(Icons.open_in_new, size: 16),
+                                      label: Text(
+                                        ctaButtonText.text.isEmpty
+                                            ? 'Learn More'
+                                            : ctaButtonText.text,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

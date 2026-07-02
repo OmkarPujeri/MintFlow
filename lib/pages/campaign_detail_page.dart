@@ -10,6 +10,7 @@ import '../widgets/app_toast.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_badge.dart';
+import '../widgets/youtube_player_widget.dart';
 
 /// Full drill-in view for one campaign: media, economics, tasks, responses.
 class CampaignDetailPage extends StatelessWidget {
@@ -89,7 +90,13 @@ class CampaignDetailPage extends StatelessWidget {
                 _TasksCard(campaign: campaign),
               ],
             );
-            final right = _VideoCard(campaign: campaign);
+            final right = Column(
+              children: [
+                _VideoCard(campaign: campaign),
+                const SizedBox(height: 18),
+                _TargetingCard(campaign: campaign),
+              ],
+            );
             if (!wide) {
               return Column(children: [right, const SizedBox(height: 18), left]);
             }
@@ -383,33 +390,11 @@ class _VideoCard extends StatelessWidget {
         children: [
           Text('Campaign Video', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 14),
-          AspectRatio(
-            aspectRatio: 16 / 10,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF3CD189), Color(0xFF0A2A20)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.play_circle_fill,
-                    color: Colors.white,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    campaign.youtubeVideoId,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: YoutubePlayerWidget(
+              videoId: campaign.youtubeVideoId,
+              aspectRatio: 16 / 10,
             ),
           ),
           const SizedBox(height: 12),
@@ -552,6 +537,113 @@ class _TransactionsCard extends StatelessWidget {
               ),
         ],
       ),
+    );
+  }
+}
+
+class _TargetingCard extends StatelessWidget {
+  const _TargetingCard({required this.campaign});
+
+  final Campaign campaign;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Viewer Targeting & CTA', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 14),
+          _TargetRow(
+            icon: Icons.people_outline,
+            label: 'Gender',
+            value: campaign.targetGender.toUpperCase(),
+          ),
+          const Divider(height: 20),
+          _TargetRow(
+            icon: Icons.child_care_outlined,
+            label: 'Age Group',
+            value: '${campaign.targetAgeMin ?? 18} - ${campaign.targetAgeMax ?? 65} years old',
+          ),
+          const Divider(height: 20),
+          _TargetRow(
+            icon: Icons.location_on_outlined,
+            label: 'Locations',
+            value: campaign.targetLocations.isEmpty
+                ? 'All of India (Nationwide)'
+                : campaign.targetLocations.join(', '),
+          ),
+          const Divider(height: 20),
+          _TargetRow(
+            icon: Icons.interests_outlined,
+            label: 'Interests',
+            value: campaign.targetInterests.isEmpty
+                ? 'All Interests (Broad)'
+                : campaign.targetInterests.join(', '),
+          ),
+          if (campaign.ctaUrl != null && campaign.ctaUrl!.isNotEmpty) ...[
+            const Divider(height: 20),
+            _TargetRow(
+              icon: Icons.open_in_new_outlined,
+              label: 'CTA Link',
+              value: campaign.ctaUrl!,
+              valueColor: AppColors.mintDark,
+            ),
+            const Divider(height: 20),
+            _TargetRow(
+              icon: Icons.touch_app_outlined,
+              label: 'CTA Button Label',
+              value: campaign.ctaButtonText,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TargetRow extends StatelessWidget {
+  const _TargetRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: AppColors.muted),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: AppColors.faint, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 2),
+            SizedBox(
+              width: 240,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: valueColor ?? AppColors.ink,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -37,6 +37,17 @@ class CampaignCreate(BaseModel):
     endDate: datetime
     interactions: List[InteractionCreate] = []
 
+    # CTA Settings
+    ctaUrl: Optional[str] = None
+    ctaButtonText: Optional[str] = "Learn More"
+
+    # Demographics Targeting
+    targetGender: Optional[str] = "all"
+    targetAgeMin: Optional[int] = None
+    targetAgeMax: Optional[int] = None
+    targetLocations: Optional[List[str]] = []
+    targetInterests: Optional[List[str]] = []
+
 
 class CampaignUpdate(BaseModel):
     """Partial update — all fields optional. Used by edit campaign form."""
@@ -50,6 +61,17 @@ class CampaignUpdate(BaseModel):
     endDate: Optional[datetime] = None
     status: Optional[str] = None
     interactions: Optional[List[InteractionCreate]] = None
+
+    # CTA Settings
+    ctaUrl: Optional[str] = None
+    ctaButtonText: Optional[str] = None
+
+    # Demographics Targeting
+    targetGender: Optional[str] = None
+    targetAgeMin: Optional[int] = None
+    targetAgeMax: Optional[int] = None
+    targetLocations: Optional[List[str]] = None
+    targetInterests: Optional[List[str]] = None
 
 
 class CampaignResponse(BaseModel):
@@ -70,6 +92,18 @@ class CampaignResponse(BaseModel):
     endDate: datetime
     status: str                           # "draft" | "active" | "paused" | "completed"
     interactions: List[InteractionOut] = []
+
+    # CTA Settings
+    ctaUrl: Optional[str] = None
+    ctaButtonText: Optional[str] = "Learn More"
+
+    # Demographics Targeting
+    targetGender: Optional[str] = "all"
+    targetAgeMin: Optional[int] = None
+    targetAgeMax: Optional[int] = None
+    targetLocations: Optional[List[str]] = []
+    targetInterests: Optional[List[str]] = []
+
     views: int = 0                        # total watch sessions started
     completions: int = 0                  # sessions that reached rewarded status
     createdAt: datetime

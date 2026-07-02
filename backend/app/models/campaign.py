@@ -1,7 +1,7 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Enum as SAEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Integer, Enum as SAEnum
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -26,10 +26,24 @@ class Campaign(Base):
     youtube_url = Column(String(500), nullable=True)         # full YouTube URL (any format)
     youtube_video_id = Column(String(20), nullable=True)     # extracted 11-char video ID
 
+    # Budget & Pricing
     total_budget = Column(Numeric(12, 2), nullable=False)
     remaining_budget = Column(Numeric(12, 2), nullable=False)
     reward_per_view = Column(Numeric(8, 2), nullable=False, default=2.00)
     status = Column(SAEnum(CampaignStatus), default=CampaignStatus.draft, nullable=False)
+
+    # CTA Settings
+    cta_url = Column(String(500), nullable=True)
+    cta_button_text = Column(String(100), nullable=True, default="Learn More")
+
+    # Demographic Targeting
+    target_gender = Column(String(50), nullable=True, default="all")  # "all", "male", "female"
+    target_age_min = Column(Integer, nullable=True)
+    target_age_max = Column(Integer, nullable=True)
+    target_locations = Column(JSONB, nullable=True)                  # ["Mumbai", "Delhi"]
+    target_interests = Column(JSONB, nullable=True)                  # ["Gaming", "Tech"]
+
+    # Timestamps
     start_date = Column(DateTime(timezone=True), nullable=True)
     end_date = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

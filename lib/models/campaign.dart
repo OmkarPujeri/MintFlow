@@ -77,6 +77,13 @@ class Campaign {
     required this.views,
     required this.completions,
     required this.createdAt,
+    this.ctaUrl,
+    this.ctaButtonText = 'Learn More',
+    this.targetGender = 'all',
+    this.targetAgeMin,
+    this.targetAgeMax,
+    this.targetLocations = const [],
+    this.targetInterests = const [],
   });
 
   final String id;
@@ -93,6 +100,14 @@ class Campaign {
   final int views;
   final int completions;
   final DateTime createdAt;
+
+  final String? ctaUrl;
+  final String ctaButtonText;
+  final String targetGender;
+  final int? targetAgeMin;
+  final int? targetAgeMax;
+  final List<String> targetLocations;
+  final List<String> targetInterests;
 
   double get spent => completions * rewardPerCompletion;
 
@@ -115,6 +130,13 @@ class Campaign {
     int? views,
     int? completions,
     DateTime? createdAt,
+    String? ctaUrl,
+    String? ctaButtonText,
+    String? targetGender,
+    int? targetAgeMin,
+    int? targetAgeMax,
+    List<String>? targetLocations,
+    List<String>? targetInterests,
   }) {
     return Campaign(
       id: id ?? this.id,
@@ -131,6 +153,13 @@ class Campaign {
       views: views ?? this.views,
       completions: completions ?? this.completions,
       createdAt: createdAt ?? this.createdAt,
+      ctaUrl: ctaUrl ?? this.ctaUrl,
+      ctaButtonText: ctaButtonText ?? this.ctaButtonText,
+      targetGender: targetGender ?? this.targetGender,
+      targetAgeMin: targetAgeMin ?? this.targetAgeMin,
+      targetAgeMax: targetAgeMax ?? this.targetAgeMax,
+      targetLocations: targetLocations ?? this.targetLocations,
+      targetInterests: targetInterests ?? this.targetInterests,
     );
   }
 
@@ -149,6 +178,13 @@ class Campaign {
         'views': views,
         'completions': completions,
         'createdAt': createdAt.toIso8601String(),
+        'ctaUrl': ctaUrl,
+        'ctaButtonText': ctaButtonText,
+        'targetGender': targetGender,
+        'targetAgeMin': targetAgeMin,
+        'targetAgeMax': targetAgeMax,
+        'targetLocations': targetLocations,
+        'targetInterests': targetInterests,
       };
 
   factory Campaign.fromJson(Map<String, dynamic> json) => Campaign(
@@ -171,6 +207,17 @@ class Campaign {
         views: json['views'] as int,
         completions: json['completions'] as int,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        ctaUrl: json['ctaUrl'] as String?,
+        ctaButtonText: (json['ctaButtonText'] as String?) ?? 'Learn More',
+        targetGender: (json['targetGender'] as String?) ?? 'all',
+        targetAgeMin: json['targetAgeMin'] as int?,
+        targetAgeMax: json['targetAgeMax'] as int?,
+        targetLocations: json['targetLocations'] != null
+            ? List<String>.from(json['targetLocations'] as List<dynamic>)
+            : const [],
+        targetInterests: json['targetInterests'] != null
+            ? List<String>.from(json['targetInterests'] as List<dynamic>)
+            : const [],
       );
 }
 

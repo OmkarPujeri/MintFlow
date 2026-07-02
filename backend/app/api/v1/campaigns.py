@@ -49,6 +49,15 @@ def _build_campaign_response(campaign: Campaign, db: Session) -> CampaignRespons
         views=views,
         completions=completions,
         createdAt=campaign.created_at,
+        # CTA Settings
+        ctaUrl=campaign.cta_url,
+        ctaButtonText=campaign.cta_button_text or "Learn More",
+        # Demographics Targeting
+        targetGender=campaign.target_gender or "all",
+        targetAgeMin=campaign.target_age_min,
+        targetAgeMax=campaign.target_age_max,
+        targetLocations=campaign.target_locations or [],
+        targetInterests=campaign.target_interests or [],
     )
 
 
@@ -101,6 +110,15 @@ def create_campaign(
         start_date=payload.startDate,
         end_date=payload.endDate,
         status=CampaignStatus.draft,
+        # CTA Settings
+        cta_url=payload.ctaUrl,
+        cta_button_text=payload.ctaButtonText or "Learn More",
+        # Demographics Targeting
+        target_gender=payload.targetGender or "all",
+        target_age_min=payload.targetAgeMin,
+        target_age_max=payload.targetAgeMax,
+        target_locations=payload.targetLocations,
+        target_interests=payload.targetInterests,
     )
     db.add(campaign)
     db.flush()
@@ -153,7 +171,6 @@ def update_campaign(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    # Map frontend field names → DB field names
     field_map = {
         "name": "name",
         "description": "description",
@@ -163,6 +180,13 @@ def update_campaign(
         "rewardPerCompletion": "reward_per_view",
         "startDate": "start_date",
         "endDate": "end_date",
+        "ctaUrl": "cta_url",
+        "ctaButtonText": "cta_button_text",
+        "targetGender": "target_gender",
+        "targetAgeMin": "target_age_min",
+        "targetAgeMax": "target_age_max",
+        "targetLocations": "target_locations",
+        "targetInterests": "target_interests",
     }
     data = payload.model_dump(exclude_unset=True)
     for frontend_key, db_key in field_map.items():
