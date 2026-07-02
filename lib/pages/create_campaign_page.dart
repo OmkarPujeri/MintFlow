@@ -414,6 +414,90 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               ],
             ),
             const SizedBox(height: 24),
+            const _SectionLabel('Viewer Targeting'),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _targetGender,
+                    decoration: const InputDecoration(
+                      labelText: 'Target Gender',
+                      prefixIcon: Icon(Icons.people_outline),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('All')),
+                      DropdownMenuItem(value: 'male', child: Text('Male')),
+                      DropdownMenuItem(value: 'female', child: Text('Female')),
+                    ],
+                    onChanged: (value) => setState(() => _targetGender = value!),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _targetAgeMin,
+                          decoration: const InputDecoration(labelText: 'Min Age'),
+                          keyboardType: TextInputType.number,
+                          validator: _number,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('-'),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _targetAgeMax,
+                          decoration: const InputDecoration(labelText: 'Max Age'),
+                          keyboardType: TextInputType.number,
+                          validator: _number,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _targetLocations,
+              decoration: const InputDecoration(
+                labelText: 'Target Locations (comma-separated)',
+                helperText: 'Leave empty for nationwide targeting (e.g. Mumbai, Delhi, Bangalore).',
+                prefixIcon: Icon(Icons.location_on_outlined),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _targetInterests,
+              decoration: const InputDecoration(
+                labelText: 'Target Interests (comma-separated)',
+                helperText: 'Target specific user interests (e.g. Gaming, Fashion, Tech).',
+                prefixIcon: Icon(Icons.interests_outlined),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const _SectionLabel('Call To Action (Redirect)'),
+            TextFormField(
+              controller: _ctaUrl,
+              decoration: const InputDecoration(
+                labelText: 'CTA Destination URL (optional)',
+                helperText: 'Redirects viewers to your store/website upon completion.',
+                prefixIcon: Icon(Icons.link_outlined),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _ctaButtonText,
+              decoration: const InputDecoration(
+                labelText: 'CTA Button Label',
+                helperText: 'Label shown to the viewer (e.g., Shop Now, Learn More, Claim Code).',
+                prefixIcon: Icon(Icons.touch_app_outlined),
+              ),
+            ),
+            const SizedBox(height: 24),
             Row(
               children: [
                 const Expanded(child: _SectionLabel('Viewer tasks')),
