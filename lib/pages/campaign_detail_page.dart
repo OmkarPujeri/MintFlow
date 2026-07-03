@@ -678,7 +678,7 @@ class _WatchSessionsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.between,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Watch Time Analytics',
@@ -721,7 +721,7 @@ class _WatchSessionsCard extends StatelessWidget {
                   if (skippedPct > 0)
                     Expanded(
                       flex: (skippedPct * 100).round(),
-                      child: Container(color: AppColors.rose),
+                      child: Container(color: AppColors.danger),
                     ),
                   if (views == 0)
                     Expanded(
@@ -733,7 +733,7 @@ class _WatchSessionsCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.between,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: _LegendItem(
@@ -753,7 +753,7 @@ class _WatchSessionsCard extends StatelessWidget {
               ),
               Expanded(
                 child: _LegendItem(
-                  color: AppColors.rose,
+                  color: AppColors.danger,
                   label: 'Skipped (<50%)',
                   percentage: skippedPct,
                   count: skipped < 0 ? 0 : skipped,
