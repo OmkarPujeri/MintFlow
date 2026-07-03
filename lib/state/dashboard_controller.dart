@@ -6,6 +6,7 @@ import '../models/insights.dart';
 import '../repositories/analytics_repository.dart';
 import '../repositories/auth_repository.dart';
 import '../repositories/campaign_repository.dart';
+import '../repositories/api_client.dart';
 
 /// Sort options for the campaigns table.
 enum CampaignSort { newest, name, budget, completion }
@@ -143,7 +144,11 @@ class DashboardController extends ChangeNotifier {
       await _refreshData();
       notifyListeners();
       return true;
-    } catch (_) {
+    } catch (e) {
+      if (e is ApiException && e.statusCode == 401) {
+        _error = 'ApiException(401)';
+        notifyListeners();
+      }
       return false;
     }
   }
