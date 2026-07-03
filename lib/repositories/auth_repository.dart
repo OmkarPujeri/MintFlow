@@ -32,6 +32,9 @@ class AuthRepository {
       name: response['name'] as String? ?? 'Company Admin',
       email: response['email'] as String,
       companyName: response['companyName'] as String? ?? 'My Brand',
+      brandBio: response['brandBio'] as String? ?? '',
+      brandWebsite: response['brandWebsite'] as String? ?? '',
+      brandLogoUrl: response['brandLogoUrl'] as String? ?? '',
     );
     _storage.write(_sessionKey, jsonEncode(admin.toJson()));
     return admin;

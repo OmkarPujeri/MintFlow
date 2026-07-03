@@ -11,6 +11,7 @@ import '../pages/overview_page.dart';
 import '../pages/responses_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/spend_page.dart';
+import '../pages/about_company_page.dart';
 import '../state/dashboard_controller.dart';
 import '../theme.dart';
 import 'app_skeleton.dart';
@@ -21,6 +22,7 @@ enum DashboardSection {
   overview,
   campaigns,
   create,
+  aboutCompany,
   interactions,
   responses,
   spend,
@@ -32,6 +34,7 @@ extension DashboardSectionMeta on DashboardSection {
         DashboardSection.overview => 'Overview',
         DashboardSection.campaigns => 'Campaigns',
         DashboardSection.create => 'Create Campaign',
+        DashboardSection.aboutCompany => 'About Company',
         DashboardSection.interactions => 'Interactions',
         DashboardSection.responses => 'Responses',
         DashboardSection.spend => 'Spend',
@@ -42,6 +45,7 @@ extension DashboardSectionMeta on DashboardSection {
         DashboardSection.overview => Icons.dashboard_outlined,
         DashboardSection.campaigns => Icons.campaign_outlined,
         DashboardSection.create => Icons.add_circle_outline,
+        DashboardSection.aboutCompany => Icons.business_outlined,
         DashboardSection.interactions => Icons.fact_check_outlined,
         DashboardSection.responses => Icons.forum_outlined,
         DashboardSection.spend => Icons.account_balance_wallet_outlined,
@@ -252,6 +256,7 @@ class _DashboardShellState extends State<DashboardShell> {
         return CreateCampaignPage(
           key: ValueKey(_editing?.id ?? 'new'),
           existing: _editing,
+          controller: controller,
           onCreate: _createCampaign,
           onUpdate: _editCampaign,
           onCancel: _editing != null
@@ -261,6 +266,8 @@ class _DashboardShellState extends State<DashboardShell> {
                 }
               : null,
         );
+      case DashboardSection.aboutCompany:
+        return AboutCompanyPage(controller: controller);
       case DashboardSection.interactions:
         return InteractionsPage(campaigns: controller.campaigns);
       case DashboardSection.responses:
@@ -290,6 +297,7 @@ class _Sidebar extends StatelessWidget {
     DashboardSection.overview,
     DashboardSection.campaigns,
     DashboardSection.create,
+    DashboardSection.aboutCompany,
     DashboardSection.interactions,
     DashboardSection.responses,
     DashboardSection.spend,

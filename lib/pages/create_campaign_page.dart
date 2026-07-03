@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../formatters.dart';
 import '../models/campaign.dart';
+import '../state/dashboard_controller.dart';
 import '../theme.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/page_header.dart';
@@ -47,12 +48,14 @@ class CreateCampaignPage extends StatefulWidget {
   const CreateCampaignPage({
     super.key,
     this.existing,
+    required this.controller,
     required this.onCreate,
     required this.onUpdate,
     this.onCancel,
   });
 
   final Campaign? existing;
+  final DashboardController controller;
   final Future<void> Function(Campaign campaign) onCreate;
   final Future<void> Function(Campaign campaign) onUpdate;
   final VoidCallback? onCancel;
@@ -140,9 +143,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _targetInterests = TextEditingController(
       text: existing?.targetInterests.join(', ') ?? '',
     );
-    _brandBio = TextEditingController(text: existing?.brandBio ?? '');
-    _brandWebsite = TextEditingController(text: existing?.brandWebsite ?? '');
-    _brandLogoUrl = TextEditingController(text: existing?.brandLogoUrl ?? '');
+    final admin = widget.controller.admin;
+    _brandBio = TextEditingController(text: existing?.brandBio ?? admin.brandBio);
+    _brandWebsite = TextEditingController(text: existing?.brandWebsite ?? admin.brandWebsite);
+    _brandLogoUrl = TextEditingController(text: existing?.brandLogoUrl ?? admin.brandLogoUrl);
 
     if (existing != null && existing.interactions.isNotEmpty) {
       for (final it in existing.interactions) {
