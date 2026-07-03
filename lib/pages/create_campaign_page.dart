@@ -75,12 +75,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   late final TextEditingController _targetAgeMax;
   late final TextEditingController _targetLocations;
   late final TextEditingController _targetInterests;
-
-  late final TextEditingController _targetLocations;
-  late final TextEditingController _targetInterests;
   late final TextEditingController _brandBio;
   late final TextEditingController _brandWebsite;
   late final TextEditingController _brandLogoUrl;
+
+  final List<_InteractionDraft> _interactions = [];
   late DateTime _startDate;
   late DateTime _endDate;
   late CampaignStatus _status;
