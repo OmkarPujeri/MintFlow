@@ -319,7 +319,10 @@ class _Sidebar extends StatelessWidget {
         crossAxisAlignment:
             compact ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         children: [
-          _Logo(compact: compact),
+          _Logo(
+            compact: compact,
+            onTap: () => onSelect(DashboardSection.overview),
+          ),
           SizedBox(height: compact ? 26 : 30),
           for (final section in _mainSections)
             _NavItem(
@@ -344,9 +347,10 @@ class _Sidebar extends StatelessWidget {
 }
 
 class _Logo extends StatelessWidget {
-  const _Logo({required this.compact});
+  const _Logo({required this.compact, required this.onTap});
 
   final bool compact;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -357,25 +361,37 @@ class _Logo extends StatelessWidget {
         'assets/brand_logo.svg',
       ),
     );
-    if (compact) return mark;
-    return Row(
-      children: [
-        mark,
-        const SizedBox(width: 12),
-        const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'MintFlow',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-            ),
-            Text(
-              'Company admin',
-              style: TextStyle(color: AppColors.muted, fontSize: 12),
-            ),
-          ],
-        ),
-      ],
+    final Widget child;
+    if (compact) {
+      child = mark;
+    } else {
+      child = Row(
+        children: [
+          mark,
+          const SizedBox(width: 12),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'MintFlow',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              ),
+              Text(
+                'Company admin',
+                style: TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: child,
+      ),
     );
   }
 }
