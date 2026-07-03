@@ -41,7 +41,7 @@ class OverviewPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PageHeader(
-            title: 'Hello, ${controller.admin.name.split(' ').first}',
+            title: 'Hello, ${controller.admin.name == "Company Admin" ? controller.admin.companyName : controller.admin.name.split(" ").first}',
             subtitle: 'Track campaign progress, completions, and reward spend.',
           ),
           const SizedBox(height: 40),
@@ -64,7 +64,7 @@ class OverviewPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         PageHeader(
-          title: 'Hello, ${controller.admin.name.split(' ').first}',
+          title: 'Hello, ${controller.admin.name == "Company Admin" ? controller.admin.companyName : controller.admin.name.split(" ").first}',
           subtitle:
               'Track campaign progress, verified completion, and reward spend.',
           trailing: FilledButton.icon(
