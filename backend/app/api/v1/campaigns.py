@@ -85,10 +85,12 @@ def _build_campaign_response(campaign: Campaign, db: Session) -> CampaignRespons
 
 def _save_interactions(campaign_id, interactions_data: list, db: Session):
     """Delete old interactions and save new flat interactions for a campaign."""
-    # Remove existing interactions
-    db.query(CampaignInteraction).filter(
+    existing = db.query(CampaignInteraction).filter(
         CampaignInteraction.campaign_id == campaign_id
-    ).delete()
+    ).all()
+    for item in existing:
+        db.delete(item)
+    db.flush()
 
     for item in interactions_data:
         interaction = CampaignInteraction(
