@@ -183,6 +183,7 @@ class _DashboardShellState extends State<DashboardShell> {
                           onMenu: useDrawer
                               ? () => _scaffoldKey.currentState?.openDrawer()
                               : null,
+                          onProfileTap: () => _goTo(DashboardSection.aboutCompany),
                         ),
                         Expanded(
                           child: AnimatedSwitcher(
@@ -506,12 +507,14 @@ class _Topbar extends StatelessWidget {
     required this.searchController,
     required this.onSearch,
     required this.onMenu,
+    required this.onProfileTap,
   });
 
   final CompanyAdmin admin;
   final TextEditingController searchController;
   final ValueChanged<String> onSearch;
   final VoidCallback? onMenu;
+  final VoidCallback onProfileTap;
 
   @override
   Widget build(BuildContext context) {
@@ -577,37 +580,53 @@ class _Topbar extends StatelessWidget {
                 tooltip: 'Notifications',
               ),
               const SizedBox(width: 8),
-              CircleAvatar(
-                radius: 19,
-                backgroundColor: AppColors.mintSoft,
-                child: Text(
-                  admin.name.substring(0, 1).toUpperCase(),
-                  style: const TextStyle(
-                    color: AppColors.mintDark,
-                    fontWeight: FontWeight.w900,
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: onProfileTap,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 19,
+                        backgroundColor: AppColors.mintSoft,
+                        backgroundImage: admin.brandLogoUrl.isNotEmpty
+                            ? NetworkImage(admin.brandLogoUrl)
+                            : null,
+                        child: admin.brandLogoUrl.isEmpty
+                            ? Text(
+                                admin.name.substring(0, 1).toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppColors.mintDark,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              )
+                            : null,
+                      ),
+                      if (showName) ...[
+                        const SizedBox(width: 10),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              admin.name,
+                              style: const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            Text(
+                              admin.companyName,
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
-              if (showName) ...[
-                const SizedBox(width: 10),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      admin.name,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    Text(
-                      admin.companyName,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           );
         },
