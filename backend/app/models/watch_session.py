@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, Numeric, DateTime, ForeignKey, Enum as SAEnum, UniqueConstraint
+from sqlalchemy import Column, Numeric, DateTime, ForeignKey, Enum as SAEnum, UniqueConstraint, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -22,6 +22,7 @@ class WatchSession(Base):
     started_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
     watch_percentage = Column(Numeric(5, 2), default=0.00)
+    cta_clicked = Column(Boolean, default=False, nullable=False)
     status = Column(SAEnum(WatchSessionStatus), default=WatchSessionStatus.started, nullable=False)
 
     __table_args__ = (

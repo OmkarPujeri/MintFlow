@@ -10,7 +10,25 @@ from app.core.constants import MIN_WATCH_PERCENTAGE
 import uuid
 from datetime import datetime, timezone
 
+from fastapi.responses import RedirectResponse
+
 router = APIRouter()
+
+
+@router.get("/redirect/{session_id}")
+def redirect_to_cta(
+    session_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    session = db.query(WatchSession).filter(WatchSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Watch session not found")
+
+    session.cta_clicked = True
+    db.commit()
+
+    destination_url = session.campaign.cta_url or session.campaign.youtube_url or "https://mintflow.com"
+    return RedirectResponse(url=destination_url)
 
 
 @router.post("/start", response_model=WatchSessionOut, status_code=201)

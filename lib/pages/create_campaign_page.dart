@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../formatters.dart';
 import '../models/campaign.dart';
 import '../theme.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/page_header.dart';
 import '../widgets/section_card.dart';
 import '../widgets/youtube_player_widget.dart';
@@ -65,6 +66,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   late DateTime _endDate;
   late CampaignStatus _status;
   bool _saving = false;
+  double? _videoDuration;
 
   bool get _isEditing => widget.existing != null;
 
@@ -207,6 +209,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   }
 
   Future<void> _submit() async {
+    if (_videoDuration != null && _videoDuration! > 180) {
+      AppToast.show(
+        context,
+        'Cannot publish campaign: video exceeds 3 minutes limit.',
+        kind: ToastKind.danger,
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
@@ -306,6 +316,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               youtubeUrl: _youtubeUrl,
               ctaUrl: _ctaUrl,
               ctaButtonText: _ctaButtonText,
+              onDurationLoaded: (duration) {
+                _videoDuration = duration;
+                if (mounted) setState(() {});
+              },
             );
             if (!wide) {
               return Column(
@@ -355,13 +369,28 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _youtubeUrl,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'YouTube video URL',
-                helperText:
-                    'Supports youtube.com/watch, youtu.be, Shorts, and embed URLs.',
-                prefixIcon: Icon(Icons.play_circle_outline),
+                helperText: _videoDuration != null
+                    ? 'Video duration: ${(_videoDuration! / 60).floor()}m ${(_videoDuration! % 60).round()}s'
+                    : 'Supports youtube.com/watch, youtu.be, Shorts, and embed URLs.',
+                helperStyle: TextStyle(
+                  color: _videoDuration != null && _videoDuration! > 180
+                      ? AppColors.danger
+                      : AppColors.faint,
+                  fontWeight: _videoDuration != null && _videoDuration! > 180
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
+                errorText: _videoDuration != null && _videoDuration! > 180
+                    ? 'Video must be 3 minutes (180s) or less. Selected video is ${(_videoDuration! / 60).floor()}m ${(_videoDuration! % 60).round()}s long.'
+                    : null,
+                prefixIcon: const Icon(Icons.play_circle_outline),
               ),
               validator: _youtubeUrlValidator,
+              onChanged: (val) {
+                setState(() => _videoDuration = null);
+              },
             ),
             const SizedBox(height: 24),
             const _SectionLabel('Reward economics'),
@@ -743,6 +772,7 @@ class _MobilePreview extends StatelessWidget {
     required this.youtubeUrl,
     required this.ctaUrl,
     required this.ctaButtonText,
+    this.onDurationLoaded,
   });
 
   final _InteractionDraft interaction;
@@ -751,6 +781,7 @@ class _MobilePreview extends StatelessWidget {
   final TextEditingController youtubeUrl;
   final TextEditingController ctaUrl;
   final TextEditingController ctaButtonText;
+  final ValueChanged<double>? onDurationLoaded;
 
   @override
   Widget build(BuildContext context) {
@@ -798,6 +829,7 @@ class _MobilePreview extends StatelessWidget {
                             return YoutubePlayerWidget(
                               videoId: videoId,
                               aspectRatio: 16 / 9,
+                              onDurationLoaded: onDurationLoaded,
                             );
                           }
                           return Container(
