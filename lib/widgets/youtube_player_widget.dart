@@ -8,11 +8,13 @@ class YoutubePlayerWidget extends StatefulWidget {
     required this.videoId,
     this.aspectRatio = 16 / 9,
     this.onDurationLoaded,
+    this.onTimeChanged,
   });
 
   final String videoId;
   final double aspectRatio;
   final ValueChanged<double>? onDurationLoaded;
+  final void Function(double position, double duration)? onTimeChanged;
 
   @override
   State<YoutubePlayerWidget> createState() => _YoutubePlayerWidgetState();
@@ -34,6 +36,20 @@ class _YoutubePlayerWidgetState extends State<YoutubePlayerWidget> {
       ),
     );
     _listenToDuration();
+    _listenToTime();
+  }
+
+  void _listenToTime() {
+    if (widget.onTimeChanged == null) return;
+    _controller.addListener(() {
+      try {
+        final position = _controller.value.position.inMilliseconds / 1000.0;
+        final duration = _controller.value.metaData.duration.inMilliseconds / 1000.0;
+        if (duration > 0) {
+          widget.onTimeChanged!(position, duration);
+        }
+      } catch (_) {}
+    });
   }
 
   void _listenToDuration() {

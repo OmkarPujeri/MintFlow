@@ -764,7 +764,7 @@ class _InteractionEditor extends StatelessWidget {
   }
 }
 
-class _MobilePreview extends StatelessWidget {
+class _MobilePreview extends StatefulWidget {
   const _MobilePreview({
     required this.interaction,
     required this.name,
@@ -784,7 +784,22 @@ class _MobilePreview extends StatelessWidget {
   final ValueChanged<double>? onDurationLoaded;
 
   @override
+  State<_MobilePreview> createState() => _MobilePreviewState();
+}
+
+class _MobilePreviewState extends State<_MobilePreview> {
+  double _position = 0.0;
+  double _duration = 0.0;
+
+  bool get _showCTA {
+    if (_duration <= 0) return false;
+    return (_duration - _position) <= 3.0;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final showOnlyCTA = _showCTA && widget.ctaUrl.text.trim().isNotEmpty;
+
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -822,14 +837,20 @@ class _MobilePreview extends StatelessWidget {
                   children: [
                     Expanded(
                       child: ListenableBuilder(
-                        listenable: youtubeUrl,
+                        listenable: widget.youtubeUrl,
                         builder: (context, _) {
-                          final videoId = extractYouTubeVideoId(youtubeUrl.text.trim());
+                          final videoId = extractYouTubeVideoId(widget.youtubeUrl.text.trim());
                           if (videoId != null && videoId.isNotEmpty) {
                             return YoutubePlayerWidget(
                               videoId: videoId,
                               aspectRatio: 16 / 9,
-                              onDurationLoaded: onDurationLoaded,
+                              onDurationLoaded: widget.onDurationLoaded,
+                              onTimeChanged: (pos, dur) {
+                                setState(() {
+                                  _position = pos;
+                                  _duration = dur;
+                                });
+                              },
                             );
                           }
                           return Container(
@@ -879,90 +900,106 @@ class _MobilePreview extends StatelessWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ListenableBuilder(
-                            listenable: name,
-                            builder: (context, _) => Text(
-                              name.text.isEmpty ? 'Campaign title' : name.text,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ListenableBuilder(
-                            listenable: interaction.question,
-                            builder: (context, _) => Text(
-                              interaction.question.text.isEmpty
-                                  ? 'Viewer task question appears here.'
-                                  : interaction.question.text,
-                              style: const TextStyle(
-                                color: AppColors.muted,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.mintSoft,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              interaction.type.label,
-                              style: const TextStyle(
-                                color: AppColors.mintDark,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ListenableBuilder(
-                              listenable: reward,
-                              builder: (context, _) => FilledButton(
-                                onPressed: () {},
-                                child: Text(
-                                  'Complete & Earn Rs. ${reward.text.isEmpty ? '2' : reward.text}',
+                      child: showOnlyCTA
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.star_purple500_outlined,
+                                  color: AppColors.amber,
+                                  size: 32,
+                                ).animate(onPlay: (controller) => controller.repeat())
+                                 .shimmer(duration: const Duration(seconds: 2)),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Bonus Action Unlocked!',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.mintDark,
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
-                          ListenableBuilder(
-                            listenable: ctaUrl,
-                            builder: (context, _) {
-                              if (ctaUrl.text.trim().isEmpty) return const SizedBox();
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: SizedBox(
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    onPressed: () {},
+                                    icon: const Icon(Icons.open_in_new),
+                                    label: Text(
+                                      widget.ctaButtonText.text.isEmpty
+                                          ? 'Learn More'
+                                          : widget.ctaButtonText.text,
+                                    ),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: AppColors.mintDark,
+                                      padding: const EdgeInsets.symmetric(vertical: 18),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListenableBuilder(
+                                  listenable: widget.name,
+                                  builder: (context, _) => Text(
+                                    widget.name.text.isEmpty
+                                        ? 'Campaign title'
+                                        : widget.name.text,
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ListenableBuilder(
+                                  listenable: widget.interaction.question,
+                                  builder: (context, _) => Text(
+                                    widget.interaction.question.text.isEmpty
+                                        ? 'Viewer task question appears here.'
+                                        : widget.interaction.question.text,
+                                    style: const TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.mintSoft,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    widget.interaction.type.label,
+                                    style: const TextStyle(
+                                      color: AppColors.mintDark,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                SizedBox(
                                   width: double.infinity,
                                   child: ListenableBuilder(
-                                    listenable: ctaButtonText,
-                                    builder: (context, _) => OutlinedButton.icon(
+                                    listenable: widget.reward,
+                                    builder: (context, _) => FilledButton(
                                       onPressed: () {},
-                                      icon: const Icon(Icons.open_in_new, size: 16),
-                                      label: Text(
-                                        ctaButtonText.text.isEmpty
-                                            ? 'Learn More'
-                                            : ctaButtonText.text,
+                                      child: Text(
+                                        'Complete & Earn Rs. ${widget.reward.text.isEmpty ? '2' : widget.reward.text}',
                                       ),
                                     ),
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                              ],
+                            ),
                     ),
                   ],
                 ),
