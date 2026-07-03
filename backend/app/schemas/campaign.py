@@ -3,6 +3,14 @@ from typing import Optional, List
 from datetime import datetime
 
 
+# ─── Carousel Slides Schema ───────────────────────────────────────────────────
+
+class SlideCreate(BaseModel):
+    type: str                             # "video" | "image"
+    url: str
+    videoId: Optional[str] = None         # YouTube video ID if video slide
+
+
 # ─── Interaction Schemas (flat format matching Flutter frontend) ───────────────
 
 class InteractionCreate(BaseModel):
@@ -29,10 +37,11 @@ class CampaignCreate(BaseModel):
     """
     name: str
     description: str = ""
-    youtubeUrl: str                       # full YouTube URL (any format)
-    youtubeVideoId: str                   # extracted 11-char video ID
+    youtubeUrl: Optional[str] = ""        # fallback/compat
+    youtubeVideoId: Optional[str] = ""    # fallback/compat
+    slides: List[SlideCreate] = []        # Carousel slides
     budget: float                         # stored as total_budget in DB
-    rewardPerCompletion: float = 2.0      # stored as reward_per_view in DB
+    rewardPerCompletion: float = 2.0      # stored as reward_per_view in DB (represented in Coins)
     startDate: datetime
     endDate: datetime
     interactions: List[InteractionCreate] = []
@@ -55,6 +64,7 @@ class CampaignUpdate(BaseModel):
     description: Optional[str] = None
     youtubeUrl: Optional[str] = None
     youtubeVideoId: Optional[str] = None
+    slides: Optional[List[SlideCreate]] = None
     budget: Optional[float] = None
     rewardPerCompletion: Optional[float] = None
     startDate: Optional[datetime] = None
@@ -85,6 +95,7 @@ class CampaignResponse(BaseModel):
     description: str
     youtubeUrl: str
     youtubeVideoId: str
+    slides: List[SlideCreate] = []
     budget: float
     rewardPerCompletion: float
     remainingBudget: float

@@ -22,14 +22,18 @@ class Campaign(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
 
-    # Video fields — aligned with Flutter frontend model
-    youtube_url = Column(String(500), nullable=True)         # full YouTube URL (any format)
-    youtube_video_id = Column(String(20), nullable=True)     # extracted 11-char video ID
+    # Video fields — aligned with Flutter frontend model (fallback for single-video)
+    youtube_url = Column(String(500), nullable=True)
+    youtube_video_id = Column(String(20), nullable=True)
+
+    # Carousel slides
+    # Structure: [{"type": "video" | "image", "url": "...", "videoId": "..."}]
+    slides = Column(JSONB, nullable=True)
 
     # Budget & Pricing
     total_budget = Column(Numeric(12, 2), nullable=False)
     remaining_budget = Column(Numeric(12, 2), nullable=False)
-    reward_per_view = Column(Numeric(8, 2), nullable=False, default=2.00)
+    reward_per_view = Column(Numeric(8, 2), nullable=False, default=2.00) # Stored in INR terms
     status = Column(SAEnum(CampaignStatus), default=CampaignStatus.draft, nullable=False)
 
     # CTA Settings

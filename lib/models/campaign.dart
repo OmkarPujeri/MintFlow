@@ -61,6 +61,30 @@ class CampaignInteraction {
       );
 }
 
+class CampaignSlide {
+  const CampaignSlide({
+    required this.type,
+    required this.url,
+    this.videoId,
+  });
+
+  final String type; // "video" | "image"
+  final String url;
+  final String? videoId;
+
+  Map<String, dynamic> toJson() => {
+        'type': type,
+        'url': url,
+        'videoId': videoId,
+      };
+
+  factory CampaignSlide.fromJson(Map<String, dynamic> json) => CampaignSlide(
+        type: json['type'] as String,
+        url: json['url'] as String,
+        videoId: json['videoId'] as String?,
+      );
+}
+
 class Campaign {
   const Campaign({
     required this.id,
@@ -77,6 +101,7 @@ class Campaign {
     required this.views,
     required this.completions,
     required this.createdAt,
+    this.slides = const [],
     this.ctaUrl,
     this.ctaButtonText = 'Learn More',
     this.targetGender = 'all',
@@ -100,6 +125,7 @@ class Campaign {
   final int views;
   final int completions;
   final DateTime createdAt;
+  final List<CampaignSlide> slides;
 
   final String? ctaUrl;
   final String ctaButtonText;
@@ -130,6 +156,7 @@ class Campaign {
     int? views,
     int? completions,
     DateTime? createdAt,
+    List<CampaignSlide>? slides,
     String? ctaUrl,
     String? ctaButtonText,
     String? targetGender,
@@ -153,6 +180,7 @@ class Campaign {
       views: views ?? this.views,
       completions: completions ?? this.completions,
       createdAt: createdAt ?? this.createdAt,
+      slides: slides ?? this.slides,
       ctaUrl: ctaUrl ?? this.ctaUrl,
       ctaButtonText: ctaButtonText ?? this.ctaButtonText,
       targetGender: targetGender ?? this.targetGender,
@@ -178,6 +206,7 @@ class Campaign {
         'views': views,
         'completions': completions,
         'createdAt': createdAt.toIso8601String(),
+        'slides': slides.map((item) => item.toJson()).toList(),
         'ctaUrl': ctaUrl,
         'ctaButtonText': ctaButtonText,
         'targetGender': targetGender,
@@ -191,9 +220,9 @@ class Campaign {
         id: json['id'] as String,
         name: json['name'] as String,
         description: json['description'] as String,
-        youtubeUrl: (json['youtubeUrl'] ?? json['videoUrl']) as String,
+        youtubeUrl: (json['youtubeUrl'] ?? json['videoUrl'] ?? '') as String,
         youtubeVideoId: (json['youtubeVideoId'] ??
-            extractYouTubeVideoId((json['youtubeUrl'] ?? json['videoUrl']) as String) ??
+            extractYouTubeVideoId((json['youtubeUrl'] ?? json['videoUrl'] ?? '') as String) ??
             '') as String,
         budget: (json['budget'] as num).toDouble(),
         rewardPerCompletion: (json['rewardPerCompletion'] as num).toDouble(),
@@ -207,6 +236,11 @@ class Campaign {
         views: json['views'] as int,
         completions: json['completions'] as int,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        slides: json['slides'] != null
+            ? (json['slides'] as List<dynamic>)
+                .map((item) => CampaignSlide.fromJson(item as Map<String, dynamic>))
+                .toList()
+            : const [],
         ctaUrl: json['ctaUrl'] as String?,
         ctaButtonText: (json['ctaButtonText'] as String?) ?? 'Learn More',
         targetGender: (json['targetGender'] as String?) ?? 'all',

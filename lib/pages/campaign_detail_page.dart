@@ -94,7 +94,7 @@ class CampaignDetailPage extends StatelessWidget {
             );
             final right = Column(
               children: [
-                _VideoCard(campaign: campaign),
+                _SlidesCard(campaign: campaign),
                 const SizedBox(height: 18),
                 _TargetingCard(campaign: campaign),
               ],
@@ -379,29 +379,97 @@ class _TasksCard extends StatelessWidget {
   }
 }
 
-class _VideoCard extends StatelessWidget {
-  const _VideoCard({required this.campaign});
+class _SlidesCard extends StatefulWidget {
+  const _SlidesCard({required this.campaign});
 
   final Campaign campaign;
 
   @override
+  State<_SlidesCard> createState() => _SlidesCardState();
+}
+
+class _SlidesCardState extends State<_SlidesCard> {
+  int _currentIdx = 0;
+
+  @override
   Widget build(BuildContext context) {
+    final slides = widget.campaign.slides;
+    if (slides.isEmpty) {
+      return SectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Campaign Media', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 14),
+            const Text('No slides added.', style: TextStyle(color: AppColors.muted)),
+          ],
+        ),
+      );
+    }
+
+    final currentSlide = slides[_currentIdx];
+
     return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Campaign Video', style: Theme.of(context).textTheme.titleLarge),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Campaign Slides (${slides.length})',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              if (slides.length > 1)
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios, size: 14),
+                      onPressed: _currentIdx == 0
+                          ? null
+                          : () => setState(() => _currentIdx--),
+                    ),
+                    Text(
+                      '${_currentIdx + 1}/${slides.length}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                      onPressed: _currentIdx == slides.length - 1
+                          ? null
+                          : () => setState(() => _currentIdx++),
+                    ),
+                  ],
+                ),
+            ],
+          ),
           const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
-            child: YoutubePlayerWidget(
-              videoId: campaign.youtubeVideoId,
-              aspectRatio: 16 / 10,
+            child: Container(
+              height: 200,
+              color: Colors.black,
+              alignment: Alignment.center,
+              child: currentSlide.type == 'video'
+                  ? YoutubePlayerWidget(
+                      videoId: currentSlide.videoId ?? '',
+                      aspectRatio: 16 / 10,
+                    )
+                  : Image.network(
+                      currentSlide.url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (c, e, s) => const Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.white54,
+                        size: 40,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            campaign.youtubeUrl,
+            currentSlide.url,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppColors.muted, fontSize: 12.5),

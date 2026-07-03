@@ -41,12 +41,12 @@ class _YoutubePlayerWidgetState extends State<YoutubePlayerWidget> {
 
   void _listenToTime() {
     if (widget.onTimeChanged == null) return;
-    _controller.addListener(() {
+    _controller.videoStateStream.listen((state) async {
       try {
-        final position = _controller.value.position.inMilliseconds / 1000.0;
-        final duration = _controller.value.metaData.duration.inMilliseconds / 1000.0;
-        if (duration > 0) {
-          widget.onTimeChanged!(position, duration);
+        final double pos = await _controller.currentTime;
+        final double dur = await _controller.duration;
+        if (dur > 0) {
+          widget.onTimeChanged!(pos, dur);
         }
       } catch (_) {}
     });

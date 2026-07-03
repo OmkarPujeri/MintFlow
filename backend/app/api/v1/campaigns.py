@@ -7,7 +7,7 @@ from app.models.user import User
 from app.models.campaign import Campaign, CampaignStatus
 from app.models.campaign_interaction import CampaignInteraction, InteractionType, InteractionQuestion, QuestionType
 from app.models.watch_session import WatchSession, WatchSessionStatus
-from app.schemas.campaign import CampaignCreate, CampaignUpdate, CampaignResponse, InteractionOut
+from app.schemas.campaign import CampaignCreate, CampaignUpdate, CampaignResponse, InteractionOut, SlideCreate
 import uuid
 
 router = APIRouter()
@@ -33,12 +33,29 @@ def _build_campaign_response(campaign: Campaign, db: Session) -> CampaignRespons
             correctAnswer=question.correct_option if question else None,
         ))
 
+    # Serialize slides
+    slides_out = []
+    if campaign.slides:
+        for s in campaign.slides:
+            slides_out.append(SlideCreate(
+                type=s.get("type", "video"),
+                url=s.get("url", ""),
+                videoId=s.get("videoId"),
+            ))
+    elif campaign.youtube_url:
+        slides_out.append(SlideCreate(
+            type="video",
+            url=campaign.youtube_url,
+            videoId=campaign.youtube_video_id,
+        ))
+
     return CampaignResponse(
         id=str(campaign.id),
         name=campaign.name,
         description=campaign.description or "",
         youtubeUrl=campaign.youtube_url or "",
         youtubeVideoId=campaign.youtube_video_id or "",
+        slides=slides_out,
         budget=float(campaign.total_budget),
         rewardPerCompletion=float(campaign.reward_per_view),
         remainingBudget=float(campaign.remaining_budget),
@@ -98,12 +115,24 @@ def create_campaign(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_company_admin)
 ):
+    slides_db = [s.model_dump() for s in payload.slides]
+    youtube_url_val = payload.youtubeUrl or ""
+    youtube_video_id_val = payload.youtubeVideoId or ""
+    if not slides_db and youtube_url_val:
+        slides_db = [{"type": "video", "url": youtube_url_val, "videoId": youtube_video_id_val}]
+    elif slides_db and not youtube_url_val:
+        first_video = next((s for s in slides_db if s["type"] == "video"), None)
+        if first_video:
+            youtube_url_val = first_video["url"]
+            youtube_video_id_val = first_video["videoId"]
+
     campaign = Campaign(
         company_admin_id=current_user.id,
         name=payload.name,
         description=payload.description,
-        youtube_url=payload.youtubeUrl,
-        youtube_video_id=payload.youtubeVideoId,
+        youtube_url=youtube_url_val,
+        youtube_video_id=youtube_video_id_val,
+        slides=slides_db,
         total_budget=payload.budget,
         remaining_budget=payload.budget,
         reward_per_view=payload.rewardPerCompletion,
@@ -192,6 +221,15 @@ def update_campaign(
     for frontend_key, db_key in field_map.items():
         if frontend_key in data:
             setattr(campaign, db_key, data[frontend_key])
+
+    # Handle slides update
+    if "slides" in data:
+        slides_db = [s.model_dump() for s in payload.slides] if payload.slides is not None else []
+        campaign.slides = slides_db
+        first_video = next((s for s in slides_db if s["type"] == "video"), None)
+        if first_video:
+            campaign.youtube_url = first_video["url"]
+            campaign.youtube_video_id = first_video["videoId"]
 
     # Handle budget update — also reset remaining_budget proportionally
     if "budget" in data:

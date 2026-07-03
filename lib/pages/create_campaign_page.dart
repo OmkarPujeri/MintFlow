@@ -28,6 +28,21 @@ class _InteractionDraft {
   }
 }
 
+/// Editable draft for a single slide.
+class _SlideDraft {
+  _SlideDraft({
+    required this.type,
+    String url = '',
+  }) : urlController = TextEditingController(text: url);
+
+  String type; // "video" | "image"
+  final TextEditingController urlController;
+
+  void dispose() {
+    urlController.dispose();
+  }
+}
+
 class CreateCampaignPage extends StatefulWidget {
   const CreateCampaignPage({
     super.key,
@@ -67,6 +82,30 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   late CampaignStatus _status;
   bool _saving = false;
   double? _videoDuration;
+  final List<_SlideDraft> _slides = [];
+
+  void _addSlide(String type, {String url = ''}) {
+    if (_slides.length >= 5) {
+      AppToast.show(context, 'Maximum 5 slides allowed', kind: ToastKind.danger);
+      return;
+    }
+    final slide = _SlideDraft(type: type, url: url);
+    slide.urlController.addListener(_refresh);
+    setState(() {
+      _slides.add(slide);
+    });
+  }
+
+  void _removeSlide(int index) {
+    if (_slides.length <= 1) {
+      AppToast.show(context, 'Campaign must have at least 1 slide', kind: ToastKind.danger);
+      return;
+    }
+    setState(() {
+      final removed = _slides.removeAt(index);
+      removed.dispose();
+    });
+  }
 
   bool get _isEditing => widget.existing != null;
 
@@ -113,6 +152,18 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       _interactions.add(_InteractionDraft(type: InteractionType.quiz));
     }
 
+    if (existing != null && existing.slides.isNotEmpty) {
+      for (final s in existing.slides) {
+        final draft = _SlideDraft(type: s.type, url: s.url);
+        draft.urlController.addListener(_refresh);
+        _slides.add(draft);
+      }
+    } else {
+      final draft = _SlideDraft(type: 'video', url: existing?.youtubeUrl ?? '');
+      draft.urlController.addListener(_refresh);
+      _slides.add(draft);
+    }
+
     final now = DateTime.now();
     _startDate = existing?.startDate ?? now;
     _endDate = existing?.endDate ?? now.add(const Duration(days: 21));
@@ -121,7 +172,6 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         : CampaignStatus.active;
 
     _name.addListener(_refresh);
-    _youtubeUrl.addListener(_refresh);
     _reward.addListener(_refresh);
     _ctaUrl.addListener(_refresh);
     _ctaButtonText.addListener(_refresh);
@@ -134,6 +184,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _name.dispose();
     _description.dispose();
     _youtubeUrl.dispose();
+    for (final s in _slides) {
+      s.dispose();
+    }
     _budget.dispose();
     _reward.dispose();
     _ctaUrl.dispose();
@@ -221,12 +274,30 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     setState(() => _saving = true);
 
     final interactions = _buildInteractions();
+    final slides = _slides.map((s) {
+      final url = s.urlController.text.trim();
+      final videoId = s.type == 'video' ? extractYouTubeVideoId(url) : null;
+      return CampaignSlide(
+        type: s.type,
+        url: url,
+        videoId: videoId,
+      );
+    }).toList();
+
+    final firstVideo = slides.cast<CampaignSlide?>().firstWhere(
+      (s) => s?.type == 'video',
+      orElse: () => null,
+    );
+    final youtubeUrlVal = firstVideo?.url ?? '';
+    final youtubeVideoIdVal = firstVideo?.videoId ?? '';
+
     if (_isEditing) {
       final updated = widget.existing!.copyWith(
         name: _name.text.trim(),
         description: _description.text.trim(),
-        youtubeUrl: _youtubeUrl.text.trim(),
-        youtubeVideoId: extractYouTubeVideoId(_youtubeUrl.text.trim())!,
+        youtubeUrl: youtubeUrlVal,
+        youtubeVideoId: youtubeVideoIdVal,
+        slides: slides,
         budget: double.parse(_budget.text),
         rewardPerCompletion: double.parse(_reward.text),
         startDate: _startDate,
@@ -256,8 +327,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         id: 'campaign-${now.microsecondsSinceEpoch}',
         name: _name.text.trim(),
         description: _description.text.trim(),
-        youtubeUrl: _youtubeUrl.text.trim(),
-        youtubeVideoId: extractYouTubeVideoId(_youtubeUrl.text.trim())!,
+        youtubeUrl: youtubeUrlVal,
+        youtubeVideoId: youtubeVideoIdVal,
+        slides: slides,
         budget: double.parse(_budget.text),
         rewardPerCompletion: double.parse(_reward.text),
         startDate: _startDate,
@@ -313,7 +385,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               interaction: _interactions.first,
               name: _name,
               reward: _reward,
-              youtubeUrl: _youtubeUrl,
+              slides: _slides,
               ctaUrl: _ctaUrl,
               ctaButtonText: _ctaButtonText,
               onDurationLoaded: (duration) {
@@ -367,30 +439,105 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               validator: _required,
             ),
             const SizedBox(height: 14),
-            TextFormField(
-              controller: _youtubeUrl,
-              decoration: InputDecoration(
-                labelText: 'YouTube video URL',
-                helperText: _videoDuration != null
-                    ? 'Video duration: ${(_videoDuration! / 60).floor()}m ${(_videoDuration! % 60).round()}s'
-                    : 'Supports youtube.com/watch, youtu.be, Shorts, and embed URLs.',
-                helperStyle: TextStyle(
-                  color: _videoDuration != null && _videoDuration! > 180
-                      ? AppColors.danger
-                      : AppColors.faint,
-                  fontWeight: _videoDuration != null && _videoDuration! > 180
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                ),
-                errorText: _videoDuration != null && _videoDuration! > 180
-                    ? 'Video must be 3 minutes (180s) or less. Selected video is ${(_videoDuration! / 60).floor()}m ${(_videoDuration! % 60).round()}s long.'
-                    : null,
-                prefixIcon: const Icon(Icons.play_circle_outline),
-              ),
-              validator: _youtubeUrlValidator,
-              onChanged: (val) {
-                setState(() => _videoDuration = null);
+            const SizedBox(height: 14),
+            const _SectionLabel('Campaign Slides / Media (Max 5)'),
+            const SizedBox(height: 8),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _slides.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final slide = _slides[index];
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.panelAlt,
+                    border: Border.all(color: AppColors.line),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.mintSoft,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Slide #${index + 1}',
+                          style: const TextStyle(
+                            color: AppColors.mintDark,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      DropdownButton<String>(
+                        value: slide.type,
+                        underline: const SizedBox(),
+                        items: const [
+                          DropdownMenuItem(value: 'video', child: Text('Video (YT)')),
+                          DropdownMenuItem(value: 'image', child: Text('Image URL')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              slide.type = val;
+                            });
+                            _refresh();
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: slide.urlController,
+                          decoration: InputDecoration(
+                            hintText: slide.type == 'video'
+                                ? 'Paste YouTube video URL'
+                                : 'Paste direct image URL',
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'URL is required';
+                            }
+                            if (slide.type == 'video') {
+                              return _youtubeUrlValidator(val);
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      if (_slides.length > 1) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                          onPressed: () => _removeSlide(index),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
               },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _slides.length >= 5 ? null : () => _addSlide('video'),
+                  icon: const Icon(Icons.add_to_queue_outlined),
+                  label: const Text('Add Video Slide'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _slides.length >= 5 ? null : () => _addSlide('image'),
+                  icon: const Icon(Icons.image_outlined),
+                  label: const Text('Add Image Slide'),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             const _SectionLabel('Reward economics'),
@@ -412,7 +559,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   child: TextFormField(
                     controller: _reward,
                     decoration: const InputDecoration(
-                      labelText: 'Reward / completion',
+                      labelText: 'Reward / completion (Mint Coins 🪙)',
+                      helperText: '1 Coin = Rs. 0.75',
                       prefixIcon: Icon(Icons.payments_outlined),
                     ),
                     keyboardType: TextInputType.number,
@@ -769,7 +917,7 @@ class _MobilePreview extends StatefulWidget {
     required this.interaction,
     required this.name,
     required this.reward,
-    required this.youtubeUrl,
+    required this.slides,
     required this.ctaUrl,
     required this.ctaButtonText,
     this.onDurationLoaded,
@@ -778,7 +926,7 @@ class _MobilePreview extends StatefulWidget {
   final _InteractionDraft interaction;
   final TextEditingController name;
   final TextEditingController reward;
-  final TextEditingController youtubeUrl;
+  final List<_SlideDraft> slides;
   final TextEditingController ctaUrl;
   final TextEditingController ctaButtonText;
   final ValueChanged<double>? onDurationLoaded;
@@ -790,10 +938,89 @@ class _MobilePreview extends StatefulWidget {
 class _MobilePreviewState extends State<_MobilePreview> {
   double _position = 0.0;
   double _duration = 0.0;
+  int _currentSlideIndex = 0;
+  late Listenable _slidesListenable;
 
   bool get _showCTA {
     if (_duration <= 0) return false;
     return (_duration - _position) <= 3.0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initListenable();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MobilePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _initListenable();
+  }
+
+  void _initListenable() {
+    _slidesListenable = Listenable.merge(
+      widget.slides.map((s) => s.urlController).toList(),
+    );
+  }
+
+  Widget _buildSlidePreview(BuildContext context, int index) {
+    if (index >= widget.slides.length) return const SizedBox();
+    final slide = widget.slides[index];
+    final url = slide.urlController.text.trim();
+
+    if (slide.type == 'video') {
+      final videoId = extractYouTubeVideoId(url);
+      if (videoId != null && videoId.isNotEmpty) {
+        return YoutubePlayerWidget(
+          videoId: videoId,
+          aspectRatio: 16 / 9,
+          onDurationLoaded: widget.onDurationLoaded,
+          onTimeChanged: (pos, dur) {
+            setState(() {
+              _position = pos;
+              _duration = dur;
+            });
+          },
+        );
+      }
+      return Container(
+        color: Colors.black,
+        alignment: Alignment.center,
+        child: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.video_library_outlined, color: Colors.white54, size: 36),
+            SizedBox(height: 8),
+            Text('Invalid Video Slide', style: TextStyle(color: Colors.white70)),
+          ],
+        ),
+      );
+    } else {
+      return url.isNotEmpty
+          ? Image.network(
+              url,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (context, _, __) => Container(
+                color: Colors.grey[900],
+                alignment: Alignment.center,
+                child: const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 36),
+              ),
+            )
+          : Container(
+              color: const Color(0xFF1E2E28),
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.image_outlined, color: Colors.white54, size: 36),
+                  SizedBox(height: 8),
+                  Text('Empty Image Slide', style: TextStyle(color: Colors.white70)),
+                ],
+              ),
+            );
+    }
   }
 
   @override
@@ -837,63 +1064,53 @@ class _MobilePreviewState extends State<_MobilePreview> {
                   children: [
                     Expanded(
                       child: ListenableBuilder(
-                        listenable: widget.youtubeUrl,
+                        listenable: _slidesListenable,
                         builder: (context, _) {
-                          final videoId = extractYouTubeVideoId(widget.youtubeUrl.text.trim());
-                          if (videoId != null && videoId.isNotEmpty) {
-                            return YoutubePlayerWidget(
-                              videoId: videoId,
-                              aspectRatio: 16 / 9,
-                              onDurationLoaded: widget.onDurationLoaded,
-                              onTimeChanged: (pos, dur) {
-                                setState(() {
-                                  _position = pos;
-                                  _duration = dur;
-                                });
-                              },
+                          if (widget.slides.isEmpty) {
+                            return Container(
+                              color: Colors.black,
+                              alignment: Alignment.center,
+                              child: const Text('No slides configured', style: TextStyle(color: Colors.white)),
                             );
                           }
-                          return Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(18),
-                            alignment: Alignment.center,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Color(0xFF3CD189),
-                                  Color(0xFF16A066),
-                                  Color(0xFF0A2A20),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                          return Stack(
+                            children: [
+                              PageView.builder(
+                                itemCount: widget.slides.length,
+                                onPageChanged: (idx) {
+                                  setState(() {
+                                    _currentSlideIndex = idx;
+                                    _position = 0.0;
+                                    _duration = 0.0;
+                                  });
+                                },
+                                itemBuilder: (context, idx) => _buildSlidePreview(context, idx),
                               ),
-                            ),
-                            child: const Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.play_circle_fill,
-                                  color: Colors.white,
-                                  size: 40,
-                                ),
-                                SizedBox(height: 10),
-                                Text(
-                                  'YouTube Preview',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Paste a YouTube URL to preview',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
+                              if (widget.slides.length > 1) ...[
+                                Positioned(
+                                  bottom: 8,
+                                  left: 0,
+                                  right: 0,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: List.generate(
+                                      widget.slides.length,
+                                      (idx) => Container(
+                                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                                        width: 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: _currentSlideIndex == idx
+                                              ? AppColors.mintDark
+                                              : Colors.white54,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
-                            ),
+                            ],
                           );
                         },
                       ),
@@ -993,7 +1210,7 @@ class _MobilePreviewState extends State<_MobilePreview> {
                                     builder: (context, _) => FilledButton(
                                       onPressed: () {},
                                       child: Text(
-                                        'Complete & Earn Rs. ${widget.reward.text.isEmpty ? '2' : widget.reward.text}',
+                                        'Complete & Earn ${widget.reward.text.isEmpty ? '5' : widget.reward.text} Coins',
                                       ),
                                     ),
                                   ),
