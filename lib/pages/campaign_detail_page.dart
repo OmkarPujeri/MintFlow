@@ -1085,7 +1085,7 @@ class _BoostCardState extends State<_BoostCard> {
                   SizedBox(height: 2),
                   Text(
                     'Getting top feed priority for maximum reach.',
-                    style: TextStyle(color: Colors.white80, fontSize: 11.5),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11.5),
                   ),
                 ],
               ),
