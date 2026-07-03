@@ -34,10 +34,15 @@ class _SlideDraft {
   _SlideDraft({
     required this.type,
     String url = '',
-  }) : urlController = TextEditingController(text: url);
+  }) : urlController = TextEditingController(text: url) {
+    urlController.addListener(() {
+      duration = null;
+    });
+  }
 
   String type; // "video" | "image"
   final TextEditingController urlController;
+  double? duration;
 
   void dispose() {
     urlController.dispose();
@@ -78,16 +83,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   late final TextEditingController _targetAgeMax;
   late final TextEditingController _targetLocations;
   late final TextEditingController _targetInterests;
-  late final TextEditingController _brandBio;
-  late final TextEditingController _brandWebsite;
-  late final TextEditingController _brandLogoUrl;
-
   final List<_InteractionDraft> _interactions = [];
   late DateTime _startDate;
   late DateTime _endDate;
   late CampaignStatus _status;
   bool _saving = false;
-  double? _videoDuration;
   final List<_SlideDraft> _slides = [];
 
   void _addSlide(String type, {String url = ''}) {
@@ -143,10 +143,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _targetInterests = TextEditingController(
       text: existing?.targetInterests.join(', ') ?? '',
     );
-    final admin = widget.controller.admin;
-    _brandBio = TextEditingController(text: existing?.brandBio ?? admin.brandBio);
-    _brandWebsite = TextEditingController(text: existing?.brandWebsite ?? admin.brandWebsite);
-    _brandLogoUrl = TextEditingController(text: existing?.brandLogoUrl ?? admin.brandLogoUrl);
+
 
     if (existing != null && existing.interactions.isNotEmpty) {
       for (final it in existing.interactions) {
@@ -196,9 +193,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _name.dispose();
     _description.dispose();
     _youtubeUrl.dispose();
-    _brandBio.dispose();
-    _brandWebsite.dispose();
-    _brandLogoUrl.dispose();
+
     for (final s in _slides) {
       s.dispose();
     }
@@ -277,13 +272,16 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   }
 
   Future<void> _submit() async {
-    if (_videoDuration != null && _videoDuration! > 180) {
-      AppToast.show(
-        context,
-        'Cannot publish campaign: video exceeds 3 minutes limit.',
-        kind: ToastKind.danger,
-      );
-      return;
+    for (var i = 0; i < _slides.length; i++) {
+      final s = _slides[i];
+      if (s.type == 'video' && s.duration != null && s.duration! > 180) {
+        AppToast.show(
+          context,
+          'Cannot publish campaign: Slide #${i + 1} video exceeds 3 minutes limit.',
+          kind: ToastKind.danger,
+        );
+        return;
+      }
     }
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -334,9 +332,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             .map((e) => e.trim())
             .where((e) => e.isNotEmpty)
             .toList(),
-        brandBio: _brandBio.text.trim(),
-        brandWebsite: _brandWebsite.text.trim(),
-        brandLogoUrl: _brandLogoUrl.text.trim(),
+        brandBio: widget.controller.admin.brandBio,
+        brandWebsite: widget.controller.admin.brandWebsite,
+        brandLogoUrl: widget.controller.admin.brandLogoUrl,
       );
       await widget.onUpdate(updated);
     } else {
@@ -372,9 +370,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             .map((e) => e.trim())
             .where((e) => e.isNotEmpty)
             .toList(),
-        brandBio: _brandBio.text.trim(),
-        brandWebsite: _brandWebsite.text.trim(),
-        brandLogoUrl: _brandLogoUrl.text.trim(),
+        brandBio: widget.controller.admin.brandBio,
+        brandWebsite: widget.controller.admin.brandWebsite,
+        brandLogoUrl: widget.controller.admin.brandLogoUrl,
       );
       await widget.onCreate(campaign);
     }
@@ -409,9 +407,17 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               slides: _slides,
               ctaUrl: _ctaUrl,
               ctaButtonText: _ctaButtonText,
-              onDurationLoaded: (duration) {
-                _videoDuration = duration;
-                if (mounted) setState(() {});
+              onDurationLoaded: (index, duration) {
+                if (index < _slides.length) {
+                  _slides[index].duration = duration;
+                  if (duration > 180) {
+                    AppToast.show(
+                      context,
+                      'Warning: Slide #${index + 1} video exceeds the 3 minutes limit!',
+                      kind: ToastKind.danger,
+                    );
+                  }
+                }
               },
             );
             if (!wide) {
@@ -781,41 +787,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 prefixIcon: Icon(Icons.interests_outlined),
               ),
             ),
-            const SizedBox(height: 24),
-            const _SectionLabel('About the Brand'),
-            TextFormField(
-              controller: _brandBio,
-              decoration: const InputDecoration(
-                labelText: 'Brand Bio / Bio details',
-                prefixIcon: Icon(Icons.info_outline),
-                helperText: 'A short description about your brand/company to show viewers.',
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _brandWebsite,
-                    decoration: const InputDecoration(
-                      labelText: 'Brand Website URL',
-                      prefixIcon: Icon(Icons.language),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: TextFormField(
-                    controller: _brandLogoUrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Brand Logo Image URL',
-                      prefixIcon: Icon(Icons.image_outlined),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+
             const SizedBox(height: 24),
             const _SectionLabel('Call To Action (Redirect)'),
             TextFormField(
@@ -1090,7 +1062,7 @@ class _MobilePreview extends StatefulWidget {
   final List<_SlideDraft> slides;
   final TextEditingController ctaUrl;
   final TextEditingController ctaButtonText;
-  final ValueChanged<double>? onDurationLoaded;
+  final void Function(int index, double duration)? onDurationLoaded;
 
   @override
   State<_MobilePreview> createState() => _MobilePreviewState();
@@ -1136,7 +1108,9 @@ class _MobilePreviewState extends State<_MobilePreview> {
         return YoutubePlayerWidget(
           videoId: videoId,
           aspectRatio: 16 / 9,
-          onDurationLoaded: widget.onDurationLoaded,
+          onDurationLoaded: (dur) {
+            widget.onDurationLoaded?.call(index, dur);
+          },
           onTimeChanged: (pos, dur) {
             setState(() {
               _position = pos;
