@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Integer, Enum as SAEnum
+from sqlalchemy import Column, String, Text, Numeric, DateTime, ForeignKey, Integer, Boolean, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -33,19 +33,25 @@ class Campaign(Base):
     # Budget & Pricing
     total_budget = Column(Numeric(12, 2), nullable=False)
     remaining_budget = Column(Numeric(12, 2), nullable=False)
-    reward_per_view = Column(Numeric(8, 2), nullable=False, default=2.00) # Stored in INR terms
+    reward_per_view = Column(Numeric(8, 2), nullable=False, default=5.00) # Represented in Coins
     status = Column(SAEnum(CampaignStatus), default=CampaignStatus.draft, nullable=False)
 
     # CTA Settings
     cta_url = Column(String(500), nullable=True)
     cta_button_text = Column(String(100), nullable=True, default="Learn More")
 
-    # Demographic Targeting
+    # Demographics Targeting
     target_gender = Column(String(50), nullable=True, default="all")  # "all", "male", "female"
     target_age_min = Column(Integer, nullable=True)
     target_age_max = Column(Integer, nullable=True)
     target_locations = Column(JSONB, nullable=True)                  # ["Mumbai", "Delhi"]
     target_interests = Column(JSONB, nullable=True)                  # ["Gaming", "Tech"]
+
+    # Brand Details
+    brand_bio = Column(Text, nullable=True)
+    brand_website = Column(String(500), nullable=True)
+    brand_logo_url = Column(String(500), nullable=True)
+    is_boosted = Column(Boolean, default=False, nullable=False)
 
     # Timestamps
     start_date = Column(DateTime(timezone=True), nullable=True)

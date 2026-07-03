@@ -87,6 +87,8 @@ class CampaignDetailPage extends StatelessWidget {
               children: [
                 _StatsCard(campaign: campaign),
                 const SizedBox(height: 18),
+                _FinancialCard(campaign: campaign),
+                const SizedBox(height: 18),
                 _WatchSessionsCard(campaign: campaign),
                 const SizedBox(height: 18),
                 _TasksCard(campaign: campaign),
@@ -94,6 +96,22 @@ class CampaignDetailPage extends StatelessWidget {
             );
             final right = Column(
               children: [
+                _BoostCard(
+                  campaign: campaign,
+                  onBoost: () async {
+                    final ok = await controller.boostCampaign(campaign.id);
+                    if (context.mounted) {
+                      AppToast.show(
+                        context,
+                        ok ? 'Campaign Boosted Successfully!' : 'Boosting failed.',
+                        kind: ok ? ToastKind.success : ToastKind.danger,
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 18),
+                _BrandCard(campaign: campaign),
+                const SizedBox(height: 18),
                 _SlidesCard(campaign: campaign),
                 const SizedBox(height: 18),
                 _TargetingCard(campaign: campaign),
@@ -889,6 +907,239 @@ class _LegendItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FinancialCard extends StatelessWidget {
+  const _FinancialCard({required this.campaign});
+
+  final Campaign campaign;
+
+  @override
+  Widget build(BuildContext context) {
+    final double budgetVal = campaign.budget;
+    final platformFee = budgetVal * 0.20;
+    final userPool = budgetVal * 0.80;
+    final totalCoins = userPool / 0.75;
+    final costPerView = campaign.rewardPerCompletion * (0.75 / 0.80);
+
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance_wallet_outlined, color: AppColors.mint, size: 20),
+              const SizedBox(width: 8),
+              Text('Financial Economics', style: Theme.of(context).textTheme.titleLarge),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _row('Total Investment', 'Rs. ${budgetVal.toStringAsFixed(2)}', bold: true),
+          const SizedBox(height: 8),
+          _row('Platform Fee (20%)', 'Rs. ${platformFee.toStringAsFixed(2)}'),
+          const SizedBox(height: 8),
+          _row('User Payout Pool (80%)', 'Rs. ${userPool.toStringAsFixed(2)}'),
+          const SizedBox(height: 8),
+          _row('Total Coins Issued', '${totalCoins.toStringAsFixed(0)} Coins 🪙'),
+          const Divider(height: 24, color: AppColors.line),
+          _row('Cost Per Completion', 'Rs. ${costPerView.toStringAsFixed(2)}', bold: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, String value, {bool bold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: bold ? AppColors.ink : AppColors.muted, fontSize: 13, fontWeight: bold ? FontWeight.bold : null)),
+        Text(value, style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.bold, fontSize: 13)),
+      ],
+    );
+  }
+}
+
+class _BrandCard extends StatelessWidget {
+  const _BrandCard({required this.campaign});
+
+  final Campaign campaign;
+
+  @override
+  Widget build(BuildContext context) {
+    if (campaign.brandBio.isEmpty && campaign.brandWebsite.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('About the Brand', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          if (campaign.brandLogoUrl.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                campaign.brandLogoUrl,
+                height: 48,
+                fit: BoxFit.contain,
+                errorBuilder: (c, e, s) => const SizedBox.shrink(),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (campaign.brandBio.isNotEmpty) ...[
+            Text(
+              campaign.brandBio,
+              style: const TextStyle(height: 1.4, fontSize: 13, color: AppColors.muted),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (campaign.brandWebsite.isNotEmpty) ...[
+            InkWell(
+              onTap: () {},
+              child: Row(
+                children: [
+                  const Icon(Icons.language, size: 14, color: AppColors.mint),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      campaign.brandWebsite,
+                      style: const TextStyle(
+                        color: AppColors.mintDark,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BoostCard extends StatefulWidget {
+  const _BoostCard({
+    required this.campaign,
+    required this.onBoost,
+  });
+
+  final Campaign campaign;
+  final VoidCallback onBoost;
+
+  @override
+  State<_BoostCard> createState() => _BoostCardState();
+}
+
+class _BoostCardState extends State<_BoostCard> {
+  bool _boosting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.campaign.isBoosted) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFFFFD700),
+              Color(0xFFFFA500),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFA500).withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.bolt, color: Colors.white, size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Campaign is Boosted! ⚡',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.5,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Getting top feed priority for maximum reach.',
+                    style: TextStyle(color: Colors.white80, fontSize: 11.5),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.rocket_launch_outlined, color: AppColors.amber, size: 20),
+              const SizedBox(width: 8),
+              Text('Boost Campaign', style: Theme.of(context).textTheme.titleLarge),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Pin your slides and reels to the top of the viewer feeds to double your conversions and engagement.',
+            style: TextStyle(color: AppColors.muted, fontSize: 12.5, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _boosting
+                  ? null
+                  : () async {
+                      setState(() => _boosting = true);
+                      widget.onBoost();
+                      await Future.delayed(const Duration(milliseconds: 1000));
+                      if (mounted) setState(() => _boosting = false);
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.amber,
+              ),
+              child: _boosting
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    )
+                  : const Text('Boost Now (Rs. 500)'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

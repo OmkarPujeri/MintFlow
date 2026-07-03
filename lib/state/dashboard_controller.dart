@@ -163,6 +163,9 @@ class DashboardController extends ChangeNotifier {
   Future<bool> duplicateCampaign(String id) =>
       _mutate(() => _campaigns.duplicateCampaign(id));
 
+  Future<bool> boostCampaign(String id) =>
+      _mutate(() => _campaigns.boostCampaign(id));
+
   Future<bool> updateProfile(CompanyAdmin admin) async {
     try {
       _admin = await _auth.updateProfile(admin);

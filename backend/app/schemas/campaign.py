@@ -41,7 +41,7 @@ class CampaignCreate(BaseModel):
     youtubeVideoId: Optional[str] = ""    # fallback/compat
     slides: List[SlideCreate] = []        # Carousel slides
     budget: float                         # stored as total_budget in DB
-    rewardPerCompletion: float = 2.0      # stored as reward_per_view in DB (represented in Coins)
+    rewardPerCompletion: float = 5.0      # stored as reward_per_view in DB (represented in Coins)
     startDate: datetime
     endDate: datetime
     interactions: List[InteractionCreate] = []
@@ -56,6 +56,11 @@ class CampaignCreate(BaseModel):
     targetAgeMax: Optional[int] = None
     targetLocations: Optional[List[str]] = []
     targetInterests: Optional[List[str]] = []
+
+    # Brand Details
+    brandBio: Optional[str] = ""
+    brandWebsite: Optional[str] = ""
+    brandLogoUrl: Optional[str] = ""
 
 
 class CampaignUpdate(BaseModel):
@@ -82,6 +87,12 @@ class CampaignUpdate(BaseModel):
     targetAgeMax: Optional[int] = None
     targetLocations: Optional[List[str]] = None
     targetInterests: Optional[List[str]] = None
+
+    # Brand Details
+    brandBio: Optional[str] = None
+    brandWebsite: Optional[str] = None
+    brandLogoUrl: Optional[str] = None
+    isBoosted: Optional[bool] = None
 
 
 class CampaignResponse(BaseModel):
@@ -114,6 +125,12 @@ class CampaignResponse(BaseModel):
     targetAgeMax: Optional[int] = None
     targetLocations: Optional[List[str]] = []
     targetInterests: Optional[List[str]] = []
+
+    # Brand Details & Boosting
+    brandBio: Optional[str] = ""
+    brandWebsite: Optional[str] = ""
+    brandLogoUrl: Optional[str] = ""
+    isBoosted: bool = False
 
     views: int = 0                        # total watch sessions started
     completions: int = 0                  # sessions that reached rewarded status

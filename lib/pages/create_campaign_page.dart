@@ -76,7 +76,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   late final TextEditingController _targetLocations;
   late final TextEditingController _targetInterests;
 
-  final List<_InteractionDraft> _interactions = [];
+  late final TextEditingController _targetLocations;
+  late final TextEditingController _targetInterests;
+  late final TextEditingController _brandBio;
+  late final TextEditingController _brandWebsite;
+  late final TextEditingController _brandLogoUrl;
   late DateTime _startDate;
   late DateTime _endDate;
   late CampaignStatus _status;
@@ -137,6 +141,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _targetInterests = TextEditingController(
       text: existing?.targetInterests.join(', ') ?? '',
     );
+    _brandBio = TextEditingController(text: existing?.brandBio ?? '');
+    _brandWebsite = TextEditingController(text: existing?.brandWebsite ?? '');
+    _brandLogoUrl = TextEditingController(text: existing?.brandLogoUrl ?? '');
 
     if (existing != null && existing.interactions.isNotEmpty) {
       for (final it in existing.interactions) {
@@ -177,6 +184,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _ctaButtonText.addListener(_refresh);
     _targetLocations.addListener(_refresh);
     _targetInterests.addListener(_refresh);
+    _budget.addListener(_refresh);
+    _reward.addListener(_refresh);
   }
 
   @override
@@ -184,6 +193,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _name.dispose();
     _description.dispose();
     _youtubeUrl.dispose();
+    _brandBio.dispose();
+    _brandWebsite.dispose();
+    _brandLogoUrl.dispose();
     for (final s in _slides) {
       s.dispose();
     }
@@ -319,6 +331,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             .map((e) => e.trim())
             .where((e) => e.isNotEmpty)
             .toList(),
+        brandBio: _brandBio.text.trim(),
+        brandWebsite: _brandWebsite.text.trim(),
+        brandLogoUrl: _brandLogoUrl.text.trim(),
       );
       await widget.onUpdate(updated);
     } else {
@@ -354,6 +369,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             .map((e) => e.trim())
             .where((e) => e.isNotEmpty)
             .toList(),
+        brandBio: _brandBio.text.trim(),
+        brandWebsite: _brandWebsite.text.trim(),
+        brandLogoUrl: _brandLogoUrl.text.trim(),
       );
       await widget.onCreate(campaign);
     }
@@ -569,6 +587,111 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 ),
               ],
             ),
+            const SizedBox(height: 14),
+            Builder(
+              builder: (context) {
+                final double budgetVal = double.tryParse(_budget.text) ?? 0.0;
+                final double rewardVal = double.tryParse(_reward.text) ?? 0.0;
+
+                final platformFee = budgetVal * 0.20;
+                final userPool = budgetVal * 0.80;
+                final totalCoins = userPool / 0.75;
+                final estViews = rewardVal > 0 ? (totalCoins / rewardVal).floor() : 0;
+                final costPerView = rewardVal * (0.75 / 0.80);
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFF16A066),
+                        Color(0xFF0D6844),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF13201A).withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.calculate_outlined, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Live Budget Split Calculator',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(color: Colors.white24, height: 1),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Advertiser Deposit:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text('Rs. ${budgetVal.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Platform Fee (20%):', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text('Rs. ${platformFee.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Viewer Payout Pool (80%):', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text('Rs. ${userPool.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Total Coins Issued:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text('${totalCoins.toStringAsFixed(0)} Coins 🪙', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(color: Colors.white24, height: 1),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Estimated Verified Views:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text('$estViews Views', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Paid Per View:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text('Rs. ${costPerView.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 24),
             const _SectionLabel('Schedule'),
             Row(
@@ -654,6 +777,41 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 helperText: 'Target specific user interests (e.g. Gaming, Fashion, Tech).',
                 prefixIcon: Icon(Icons.interests_outlined),
               ),
+            ),
+            const SizedBox(height: 24),
+            const _SectionLabel('About the Brand'),
+            TextFormField(
+              controller: _brandBio,
+              decoration: const InputDecoration(
+                labelText: 'Brand Bio / Bio details',
+                prefixIcon: Icon(Icons.info_outline),
+                helperText: 'A short description about your brand/company to show viewers.',
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _brandWebsite,
+                    decoration: const InputDecoration(
+                      labelText: 'Brand Website URL',
+                      prefixIcon: Icon(Icons.language),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: TextFormField(
+                    controller: _brandLogoUrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Brand Logo Image URL',
+                      prefixIcon: Icon(Icons.image_outlined),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             const _SectionLabel('Call To Action (Redirect)'),

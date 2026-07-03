@@ -18,32 +18,17 @@ class CampaignRepository {
   }
 
   Future<Campaign> createCampaign(Campaign campaign) async {
-    final response = await _api.post('/api/v1/campaigns/', body: {
-      'name': campaign.name,
-      'description': campaign.description,
-      'youtubeUrl': campaign.youtubeUrl,
-      'youtubeVideoId': campaign.youtubeVideoId,
-      'budget': campaign.budget,
-      'rewardPerCompletion': campaign.rewardPerCompletion,
-      'startDate': campaign.startDate.toIso8601String(),
-      'endDate': campaign.endDate.toIso8601String(),
-      'interactions': campaign.interactions.map((i) => i.toJson()).toList(),
-    });
+    final response = await _api.post('/api/v1/campaigns/', body: campaign.toJson());
     return Campaign.fromJson(response as Map<String, dynamic>);
   }
 
   Future<Campaign> updateCampaign(Campaign campaign) async {
-    final response = await _api.patch('/api/v1/campaigns/${campaign.id}', body: {
-      'name': campaign.name,
-      'description': campaign.description,
-      'youtubeUrl': campaign.youtubeUrl,
-      'youtubeVideoId': campaign.youtubeVideoId,
-      'budget': campaign.budget,
-      'rewardPerCompletion': campaign.rewardPerCompletion,
-      'startDate': campaign.startDate.toIso8601String(),
-      'endDate': campaign.endDate.toIso8601String(),
-      'interactions': campaign.interactions.map((i) => i.toJson()).toList(),
-    });
+    final response = await _api.patch('/api/v1/campaigns/${campaign.id}', body: campaign.toJson());
+    return Campaign.fromJson(response as Map<String, dynamic>);
+  }
+
+  Future<Campaign> boostCampaign(String id) async {
+    final response = await _api.post('/api/v1/campaigns/$id/boost');
     return Campaign.fromJson(response as Map<String, dynamic>);
   }
 

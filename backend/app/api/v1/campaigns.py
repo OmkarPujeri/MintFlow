@@ -75,6 +75,11 @@ def _build_campaign_response(campaign: Campaign, db: Session) -> CampaignRespons
         targetAgeMax=campaign.target_age_max,
         targetLocations=campaign.target_locations or [],
         targetInterests=campaign.target_interests or [],
+        # Brand Details & Boosting
+        brandBio=campaign.brand_bio or "",
+        brandWebsite=campaign.brand_website or "",
+        brandLogoUrl=campaign.brand_logo_url or "",
+        isBoosted=campaign.is_boosted,
     )
 
 
@@ -148,6 +153,10 @@ def create_campaign(
         target_age_max=payload.targetAgeMax,
         target_locations=payload.targetLocations,
         target_interests=payload.targetInterests,
+        # Brand Details
+        brand_bio=payload.brandBio,
+        brand_website=payload.brandWebsite,
+        brand_logo_url=payload.brandLogoUrl,
     )
     db.add(campaign)
     db.flush()
@@ -216,6 +225,10 @@ def update_campaign(
         "targetAgeMax": "target_age_max",
         "targetLocations": "target_locations",
         "targetInterests": "target_interests",
+        "brandBio": "brand_bio",
+        "brandWebsite": "brand_website",
+        "brandLogoUrl": "brand_logo_url",
+        "isBoosted": "is_boosted",
     }
     data = payload.model_dump(exclude_unset=True)
     for frontend_key, db_key in field_map.items():
@@ -302,3 +315,22 @@ def delete_campaign(
         raise HTTPException(status_code=404, detail="Campaign not found")
     db.delete(campaign)
     db.commit()
+
+
+@router.post("/{campaign_id}/boost", response_model=CampaignResponse)
+def boost_campaign(
+    campaign_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_company_admin)
+):
+    campaign = db.query(Campaign).filter(
+        Campaign.id == campaign_id,
+        Campaign.company_admin_id == current_user.id
+    ).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    campaign.is_boosted = True
+    db.commit()
+    db.refresh(campaign)
+    return _build_campaign_response(campaign, db)

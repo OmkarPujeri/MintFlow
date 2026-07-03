@@ -109,6 +109,10 @@ class Campaign {
     this.targetAgeMax,
     this.targetLocations = const [],
     this.targetInterests = const [],
+    this.brandBio = '',
+    this.brandWebsite = '',
+    this.brandLogoUrl = '',
+    this.isBoosted = false,
   });
 
   final String id;
@@ -134,6 +138,11 @@ class Campaign {
   final int? targetAgeMax;
   final List<String> targetLocations;
   final List<String> targetInterests;
+
+  final String brandBio;
+  final String brandWebsite;
+  final String brandLogoUrl;
+  final bool isBoosted;
 
   double get spent => completions * rewardPerCompletion;
 
@@ -164,6 +173,10 @@ class Campaign {
     int? targetAgeMax,
     List<String>? targetLocations,
     List<String>? targetInterests,
+    String? brandBio,
+    String? brandWebsite,
+    String? brandLogoUrl,
+    bool? isBoosted,
   }) {
     return Campaign(
       id: id ?? this.id,
@@ -188,6 +201,10 @@ class Campaign {
       targetAgeMax: targetAgeMax ?? this.targetAgeMax,
       targetLocations: targetLocations ?? this.targetLocations,
       targetInterests: targetInterests ?? this.targetInterests,
+      brandBio: brandBio ?? this.brandBio,
+      brandWebsite: brandWebsite ?? this.brandWebsite,
+      brandLogoUrl: brandLogoUrl ?? this.brandLogoUrl,
+      isBoosted: isBoosted ?? this.isBoosted,
     );
   }
 
@@ -214,6 +231,10 @@ class Campaign {
         'targetAgeMax': targetAgeMax,
         'targetLocations': targetLocations,
         'targetInterests': targetInterests,
+        'brandBio': brandBio,
+        'brandWebsite': brandWebsite,
+        'brandLogoUrl': brandLogoUrl,
+        'isBoosted': isBoosted,
       };
 
   factory Campaign.fromJson(Map<String, dynamic> json) => Campaign(
@@ -252,6 +273,10 @@ class Campaign {
         targetInterests: json['targetInterests'] != null
             ? List<String>.from(json['targetInterests'] as List<dynamic>)
             : const [],
+        brandBio: (json['brandBio'] as String?) ?? '',
+        brandWebsite: (json['brandWebsite'] as String?) ?? '',
+        brandLogoUrl: (json['brandLogoUrl'] as String?) ?? '',
+        isBoosted: (json['isBoosted'] as bool?) ?? false,
       );
 }
 
