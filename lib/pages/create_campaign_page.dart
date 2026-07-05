@@ -728,7 +728,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _targetGender,
+                    initialValue: _targetGender,
                     decoration: const InputDecoration(
                       labelText: 'Target Gender',
                       prefixIcon: Icon(Icons.people_outline),

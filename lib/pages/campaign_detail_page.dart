@@ -743,7 +743,6 @@ class _WatchSessionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double completionRate = campaign.completionRate;
     final int views = campaign.views;
     final int completions = campaign.completions;
     
@@ -955,7 +954,7 @@ class _FinancialCard extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(color: bold ? AppColors.ink : AppColors.muted, fontSize: 13, fontWeight: bold ? FontWeight.bold : null)),
-        Text(value, style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(value, style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.bold, fontSize: 13)),
       ],
     );
   }
