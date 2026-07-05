@@ -16,7 +16,7 @@ def blacklist_token(token: str) -> None:
     """Revoke a JWT until its natural expiry. No-op for undecodable/expired tokens."""
     ttl = remaining_ttl(decode_token(token))
     if ttl > 0:
-        redis_client.setex(f"blacklist:{token}", ttl, "1")
+        redis_client.set(f"blacklist:{token}", "1", ex=ttl)
 
 
 def pagination(
