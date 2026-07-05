@@ -7,6 +7,10 @@ reward spend — backed by a **FastAPI + PostgreSQL + Redis** API.
 > **Setting up on a new machine? Read [SETUP.md](SETUP.md)** — it's the complete,
 > step-by-step onboarding guide (Docker, env files, running the stack, Google
 > Sign-In, and the production roadmap). This README is the high-level overview.
+>
+> **Deploying to production? Read [DEPLOYMENT.md](DEPLOYMENT.md)** — the hosting
+> checklist, required env vars, and the config-time gotchas (worker/DB-connection
+> sizing, CORS, Sentry, HTTPS).
 
 ## Current Scope
 

@@ -112,7 +112,9 @@ Database migrations (`alembic upgrade head`) run automatically on startup.
 
 Verify the backend:
 ```sh
-curl http://localhost:8000/health         # -> {"status":"healthy"}
+curl http://localhost:8000/health
+# -> {"status":"healthy","checks":{"database":"ok","redis":"ok"}}
+# (returns 503 if DB or Redis is down — it's a real readiness probe now)
 # API docs: http://localhost:8000/docs
 ```
 
@@ -243,48 +245,44 @@ Recent work hardened the app toward production. Key commits:
 
 ## 9. Production roadmap (what's left before going live)
 
-The app runs end-to-end locally. The items below are **not yet done** and are the
-path to a real deployment, roughly in priority order. Status verified against the
-current code.
+The app runs end-to-end locally. Status verified against the current code.
+**For the hosting walkthrough and the config-time gotchas, see
+[DEPLOYMENT.md](DEPLOYMENT.md).**
 
-**🔴 Security**
-1. **Token handling** — the JWT lives in browser storage (XSS-exposed). Also
-   `logout` and refresh **do not blacklist tokens yet**: the Redis blacklist is
-   *read* in `dependencies.py`/`auth.py` but nothing ever writes to it, so logout
-   is currently a no-op server-side. Wire logout to blacklist the token (with a
-   TTL = token expiry) and rotate refresh tokens.
-2. **`DEBUG=False` in prod** — local `.env` sets `DEBUG=True`; compose defaults to
-   `False`. Ensure staging/prod sets `ENVIRONMENT=production` and `DEBUG=False`.
+**✅ Done (in code — configure at deploy time, see DEPLOYMENT.md)**
+1. **Token revocation** — `logout` now blacklists the access token in Redis until
+   expiry, and `refresh` rotates the refresh token. *(Still open: the JWT lives in
+   browser storage / XSS-exposed — httpOnly cookies is a later frontend change.)*
+2. **Prod config guard** — the app refuses to boot with `DEBUG=True` or a
+   weak/placeholder `SECRET_KEY` when `ENVIRONMENT=production`.
+3. **Multi-worker API** — runs under Gunicorn + uvicorn workers; worker count via
+   `WEB_CONCURRENCY` (mind the DB connection limit — DEPLOYMENT.md §4).
+5. **Deep health check** — `/health` verifies DB + Redis, returns `503` if either
+   is down.
+6. **Structured logging + Sentry** — JSON logs to stdout; Sentry error tracking
+   (no-op until `SENTRY_DSN` is set).
+7. **Pagination** — `campaigns`, `feed`, `wallet/transactions` are paginated
+   (`?limit=&offset=`, default 50).
 
-**🟠 Reliability & correctness**
-3. **Multi-worker API** — Dockerfile runs a single uvicorn process. Run under
-   Gunicorn with uvicorn workers (or `uvicorn --workers N`).
-4. **Managed Postgres + Redis** — move off the local containers to a hosted DB
-   with automated backups (RDS / Cloud SQL / Neon / Supabase; Upstash for Redis).
-5. **Deep health check** — `/health` returns a static value; extend it to verify
-   DB + Redis connectivity (readiness probe).
-6. **Structured logging + error tracking** (e.g. Sentry).
-7. **Pagination on list endpoints** — `list_campaigns` (and responses) return
-   `.all()` with no limit/offset.
-
-**🟡 Deployment & delivery**
+**🟡 Hosting — not code, your deploy decisions (all in DEPLOYMENT.md)**
+4. **Managed Postgres + Redis** with automated backups (RDS / Cloud SQL / Neon /
+   Supabase; Upstash for Redis).
 8. **Backend hosting** — deploy the container (Render / Railway / Fly.io / ECS).
 9. **Frontend hosting** — `flutter build web` → Netlify / Vercel / Cloudflare /
    GitHub Pages.
 10. **HTTPS/TLS** on both API and frontend.
-11. **Dev hot-reload compose override** — a `docker-compose.override.yml` that
-    bind-mounts code + `--reload`, so backend edits don't need an image rebuild
-    (see §6 for the current host-run workaround).
+11. **Dev hot-reload compose override** — `docker-compose.override.yml` with a
+    bind-mount + `--reload` (see §6 for the current host-run workaround).
 12. **CI/CD** (GitHub Actions): lint → test → build → deploy.
 
-**🟢 Quality & maintainability**
+**🟢 Quality & maintainability (still open)**
 13. **Backend tests** (pytest) for auth / campaigns / rewards — none exist yet.
 14. **Real video storage** — AWS S3 keys are empty; campaigns currently rely on
     YouTube URLs only.
 
-✅ **Recently completed:** real Google OAuth, login error handling, Dockerized
-full stack, security hardening (CORS, rate limiting, password policy, secrets out
-of git). See §8.
+✅ **Also previously completed:** real Google OAuth, login error handling,
+Dockerized full stack, security hardening (CORS, rate limiting, password policy,
+secrets out of git). See §8.
 
 ---
 
