@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Sentry error tracking. Empty = disabled (no-op).
+    SENTRY_DSN: str = ""
+
     # Google Sign-In — Web OAuth Client ID (from Google Cloud Console → Credentials).
     # Incoming Google ID tokens must have this as their `aud`. Empty = Google login disabled.
     GOOGLE_CLIENT_ID: str = ""

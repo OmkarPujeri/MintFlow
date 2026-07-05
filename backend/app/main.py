@@ -1,13 +1,29 @@
-from fastapi import FastAPI, Response, status
+import logging
+import time
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.core.rate_limit import limiter
+from app.core.logging_config import configure_logging
 from app.db.database import SessionLocal
 from app.dependencies import redis_client
 from app.api.v1 import auth, campaigns, feed, watch, interactions, rewards, wallet, analytics
+
+configure_logging()
+logger = logging.getLogger("mintflow")
+
+# Sentry captures unhandled exceptions (auto-instruments FastAPI when installed).
+# No-op unless SENTRY_DSN is set, so dev/local runs stay clean.
+if settings.SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        traces_sample_rate=0.0,  # errors only; enable perf tracing later if needed
+    )
 
 app = FastAPI(
     title="MintFlow API",
@@ -34,6 +50,26 @@ if not settings.is_production:
     cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
 
 app.add_middleware(CORSMiddleware, **cors_kwargs)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """One structured line per request. Skips health/root pings so load-balancer
+    probes don't drown the logs."""
+    if request.url.path in ("/health", "/"):
+        return await call_next(request)
+    start = time.monotonic()
+    response = await call_next(request)
+    logger.info(
+        "request",
+        extra={
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "duration_ms": round((time.monotonic() - start) * 1000, 1),
+        },
+    )
+    return response
 
 # Routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
