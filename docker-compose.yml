@@ -1,6 +1,31 @@
-# Local dev infrastructure for MintFlow (Postgres + Redis).
-# Values match backend/.env. Start with:  docker compose up -d
+# Full local stack for MintFlow (Postgres + Redis + API).
+# Requires a root .env (see .env.example) with POSTGRES_PASSWORD and SECRET_KEY.
+# Start everything with:  docker compose up -d --build
 services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: mintflow-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Inside the compose network the DB/Redis hosts are the service names.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mintflow_db}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-False}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+    # Apply migrations, then start the API.
+    command: sh -c "cd /app && alembic upgrade head && cd /app/backend && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+
+
   postgres:
     image: postgres:16
     container_name: mintflow-pg
