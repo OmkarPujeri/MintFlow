@@ -216,6 +216,12 @@ cd backend && pip install -r requirements.txt -r requirements-dev.txt && pytest
 
 Recent work hardened the app toward production. Key commits:
 
+- `feat(ui)` — **Frontend polish pass**: top-aligned page/empty-state layout
+  (no more centered "floating" content), chart empty-states (no flat lines on
+  zero data), an advertiser **CPV-first budget calculator** with centralized
+  economics (`lib/core/constants.dart`) + grouped currency formatters, stronger
+  form validation (`lib/core/validators.dart`: email/URL, age bounds), a red
+  Logout hover state, and a sidebar tooltip fix.
 - `feat(*)` — **Production-hardening batch** (see [DEPLOYMENT.md](DEPLOYMENT.md)):
   server-side **token revocation** on logout + refresh rotation (unique `jti`
   per token); a **prod config guard** that refuses to boot with `DEBUG=True` or a

@@ -24,6 +24,7 @@ class InteractionCreate(BaseModel):
 class InteractionOut(BaseModel):
     type: str
     question: str
+    questionId: Optional[str] = None      # question UUID — required by /interactions submit
     options: List[str] = []
     correctAnswer: Optional[str] = None
 

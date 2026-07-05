@@ -48,6 +48,18 @@ class LoginResponse(BaseModel):
     role: str
 
 
+class MeResponse(BaseModel):
+    """Current viewer's profile + gamification state for the wallet/profile screen."""
+    id: str
+    email: str
+    role: str
+    mintCoins: int
+    coinsEarnedToday: int
+    raffleTickets: int
+    dailyStreak: int
+    walletBalanceInr: float
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
 

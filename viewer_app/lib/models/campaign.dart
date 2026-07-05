@@ -1,0 +1,314 @@
+enum CampaignStatus { draft, active, paused, completed }
+
+enum InteractionType { quiz, survey, poll, feedback }
+
+extension CampaignStatusLabel on CampaignStatus {
+  String get label {
+    switch (this) {
+      case CampaignStatus.draft:
+        return 'Draft';
+      case CampaignStatus.active:
+        return 'Active';
+      case CampaignStatus.paused:
+        return 'Paused';
+      case CampaignStatus.completed:
+        return 'Completed';
+    }
+  }
+}
+
+extension InteractionTypeLabel on InteractionType {
+  String get label {
+    switch (this) {
+      case InteractionType.quiz:
+        return 'Quiz';
+      case InteractionType.survey:
+        return 'Survey';
+      case InteractionType.poll:
+        return 'Poll';
+      case InteractionType.feedback:
+        return 'Feedback';
+    }
+  }
+}
+
+class CampaignInteraction {
+  const CampaignInteraction({
+    required this.type,
+    required this.question,
+    required this.options,
+    this.correctAnswer,
+  });
+
+  final InteractionType type;
+  final String question;
+  final List<String> options;
+  final String? correctAnswer;
+
+  Map<String, dynamic> toJson() => {
+        'type': type.name,
+        'question': question,
+        'options': options,
+        'correctAnswer': correctAnswer,
+      };
+
+  factory CampaignInteraction.fromJson(Map<String, dynamic> json) =>
+      CampaignInteraction(
+        type: InteractionType.values.byName(json['type'] as String),
+        question: json['question'] as String,
+        options: List<String>.from(json['options'] as List<dynamic>),
+        correctAnswer: json['correctAnswer'] as String?,
+      );
+}
+
+class CampaignSlide {
+  const CampaignSlide({
+    required this.type,
+    required this.url,
+    this.videoId,
+  });
+
+  final String type; // "video" | "image"
+  final String url;
+  final String? videoId;
+
+  Map<String, dynamic> toJson() => {
+        'type': type,
+        'url': url,
+        'videoId': videoId,
+      };
+
+  factory CampaignSlide.fromJson(Map<String, dynamic> json) => CampaignSlide(
+        type: json['type'] as String,
+        url: json['url'] as String,
+        videoId: json['videoId'] as String?,
+      );
+}
+
+class Campaign {
+  const Campaign({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.youtubeUrl,
+    required this.youtubeVideoId,
+    required this.budget,
+    required this.rewardPerCompletion,
+    required this.startDate,
+    required this.endDate,
+    required this.status,
+    required this.interactions,
+    required this.views,
+    required this.completions,
+    required this.createdAt,
+    this.slides = const [],
+    this.ctaUrl,
+    this.ctaButtonText = 'Learn More',
+    this.targetGender = 'all',
+    this.targetAgeMin,
+    this.targetAgeMax,
+    this.targetLocations = const [],
+    this.targetInterests = const [],
+    this.brandBio = '',
+    this.brandWebsite = '',
+    this.brandLogoUrl = '',
+    this.isBoosted = false,
+  });
+
+  final String id;
+  final String name;
+  final String description;
+  final String youtubeUrl;
+  final String youtubeVideoId;
+  final double budget;
+  final double rewardPerCompletion;
+  final DateTime startDate;
+  final DateTime endDate;
+  final CampaignStatus status;
+  final List<CampaignInteraction> interactions;
+  final int views;
+  final int completions;
+  final DateTime createdAt;
+  final List<CampaignSlide> slides;
+
+  final String? ctaUrl;
+  final String ctaButtonText;
+  final String targetGender;
+  final int? targetAgeMin;
+  final int? targetAgeMax;
+  final List<String> targetLocations;
+  final List<String> targetInterests;
+
+  final String brandBio;
+  final String brandWebsite;
+  final String brandLogoUrl;
+  final bool isBoosted;
+
+  double get spent => completions * rewardPerCompletion;
+
+  double get remainingBudget => budget - spent < 0 ? 0 : budget - spent;
+
+  double get completionRate => views == 0 ? 0 : completions / views;
+
+  Campaign copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? youtubeUrl,
+    String? youtubeVideoId,
+    double? budget,
+    double? rewardPerCompletion,
+    DateTime? startDate,
+    DateTime? endDate,
+    CampaignStatus? status,
+    List<CampaignInteraction>? interactions,
+    int? views,
+    int? completions,
+    DateTime? createdAt,
+    List<CampaignSlide>? slides,
+    String? ctaUrl,
+    String? ctaButtonText,
+    String? targetGender,
+    int? targetAgeMin,
+    int? targetAgeMax,
+    List<String>? targetLocations,
+    List<String>? targetInterests,
+    String? brandBio,
+    String? brandWebsite,
+    String? brandLogoUrl,
+    bool? isBoosted,
+  }) {
+    return Campaign(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      youtubeUrl: youtubeUrl ?? this.youtubeUrl,
+      youtubeVideoId: youtubeVideoId ?? this.youtubeVideoId,
+      budget: budget ?? this.budget,
+      rewardPerCompletion: rewardPerCompletion ?? this.rewardPerCompletion,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      status: status ?? this.status,
+      interactions: interactions ?? this.interactions,
+      views: views ?? this.views,
+      completions: completions ?? this.completions,
+      createdAt: createdAt ?? this.createdAt,
+      slides: slides ?? this.slides,
+      ctaUrl: ctaUrl ?? this.ctaUrl,
+      ctaButtonText: ctaButtonText ?? this.ctaButtonText,
+      targetGender: targetGender ?? this.targetGender,
+      targetAgeMin: targetAgeMin ?? this.targetAgeMin,
+      targetAgeMax: targetAgeMax ?? this.targetAgeMax,
+      targetLocations: targetLocations ?? this.targetLocations,
+      targetInterests: targetInterests ?? this.targetInterests,
+      brandBio: brandBio ?? this.brandBio,
+      brandWebsite: brandWebsite ?? this.brandWebsite,
+      brandLogoUrl: brandLogoUrl ?? this.brandLogoUrl,
+      isBoosted: isBoosted ?? this.isBoosted,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'description': description,
+        'youtubeUrl': youtubeUrl,
+        'youtubeVideoId': youtubeVideoId,
+        'budget': budget,
+        'rewardPerCompletion': rewardPerCompletion,
+        'startDate': startDate.toIso8601String(),
+        'endDate': endDate.toIso8601String(),
+        'status': status.name,
+        'interactions': interactions.map((item) => item.toJson()).toList(),
+        'views': views,
+        'completions': completions,
+        'createdAt': createdAt.toIso8601String(),
+        'slides': slides.map((item) => item.toJson()).toList(),
+        'ctaUrl': ctaUrl,
+        'ctaButtonText': ctaButtonText,
+        'targetGender': targetGender,
+        'targetAgeMin': targetAgeMin,
+        'targetAgeMax': targetAgeMax,
+        'targetLocations': targetLocations,
+        'targetInterests': targetInterests,
+        'brandBio': brandBio,
+        'brandWebsite': brandWebsite,
+        'brandLogoUrl': brandLogoUrl,
+        'isBoosted': isBoosted,
+      };
+
+  factory Campaign.fromJson(Map<String, dynamic> json) => Campaign(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        description: json['description'] as String,
+        youtubeUrl: (json['youtubeUrl'] ?? json['videoUrl'] ?? '') as String,
+        youtubeVideoId: (json['youtubeVideoId'] ??
+            extractYouTubeVideoId((json['youtubeUrl'] ?? json['videoUrl'] ?? '') as String) ??
+            '') as String,
+        budget: (json['budget'] as num).toDouble(),
+        rewardPerCompletion: (json['rewardPerCompletion'] as num).toDouble(),
+        startDate: DateTime.parse(json['startDate'] as String),
+        endDate: DateTime.parse(json['endDate'] as String),
+        status: CampaignStatus.values.byName(json['status'] as String),
+        interactions: (json['interactions'] as List<dynamic>)
+            .map((item) =>
+                CampaignInteraction.fromJson(item as Map<String, dynamic>))
+            .toList(),
+        views: json['views'] as int,
+        completions: json['completions'] as int,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        slides: json['slides'] != null
+            ? (json['slides'] as List<dynamic>)
+                .map((item) => CampaignSlide.fromJson(item as Map<String, dynamic>))
+                .toList()
+            : const [],
+        ctaUrl: json['ctaUrl'] as String?,
+        ctaButtonText: (json['ctaButtonText'] as String?) ?? 'Learn More',
+        targetGender: (json['targetGender'] as String?) ?? 'all',
+        targetAgeMin: json['targetAgeMin'] as int?,
+        targetAgeMax: json['targetAgeMax'] as int?,
+        targetLocations: json['targetLocations'] != null
+            ? List<String>.from(json['targetLocations'] as List<dynamic>)
+            : const [],
+        targetInterests: json['targetInterests'] != null
+            ? List<String>.from(json['targetInterests'] as List<dynamic>)
+            : const [],
+        brandBio: (json['brandBio'] as String?) ?? '',
+        brandWebsite: (json['brandWebsite'] as String?) ?? '',
+        brandLogoUrl: (json['brandLogoUrl'] as String?) ?? '',
+        isBoosted: (json['isBoosted'] as bool?) ?? false,
+      );
+}
+
+String? extractYouTubeVideoId(String url) {
+  final value = url.trim();
+  if (value.isEmpty) return null;
+
+  final uri = Uri.tryParse(value);
+  if (uri == null) return null;
+
+  final host = uri.host.toLowerCase().replaceFirst('www.', '');
+  if (host == 'youtu.be') {
+    final id = uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
+    return _cleanYouTubeId(id);
+  }
+
+  if (host == 'youtube.com' || host == 'm.youtube.com' || host == 'music.youtube.com') {
+    if (uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'embed') {
+      return _cleanYouTubeId(uri.pathSegments.length > 1 ? uri.pathSegments[1] : null);
+    }
+    if (uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'shorts') {
+      return _cleanYouTubeId(uri.pathSegments.length > 1 ? uri.pathSegments[1] : null);
+    }
+    return _cleanYouTubeId(uri.queryParameters['v']);
+  }
+
+  return null;
+}
+
+String? _cleanYouTubeId(String? id) {
+  if (id == null || id.isEmpty) return null;
+  final clean = id.split('?').first.split('&').first;
+  final valid = RegExp(r'^[A-Za-z0-9_-]{6,}$').hasMatch(clean);
+  return valid ? clean : null;
+}

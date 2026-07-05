@@ -6,7 +6,7 @@ from app.core.rate_limit import limiter
 from app.models.user import User, UserRole
 from app.models.wallet import Wallet
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from app.schemas.auth import RegisterRequest, LoginRequest, RegisterResponse, LoginResponse, RefreshRequest, LogoutRequest, GoogleAuthRequest
+from app.schemas.auth import RegisterRequest, LoginRequest, RegisterResponse, LoginResponse, RefreshRequest, LogoutRequest, GoogleAuthRequest, MeResponse
 from app.config import settings
 from datetime import timedelta
 
@@ -119,6 +119,22 @@ def google_auth(request: Request, payload: GoogleAuthRequest, db: Session = Depe
         name=claims.get("name") or "Company Admin",
         companyName="My Brand",           # Will be updated when profile feature is added
         role=user.role,
+    )
+
+
+@router.get("/me", response_model=MeResponse)
+def get_me(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Return the current user's profile + gamification state (coins/streak/tickets)."""
+    wallet = db.query(Wallet).filter(Wallet.user_id == current_user.id).first()
+    return MeResponse(
+        id=str(current_user.id),
+        email=current_user.email,
+        role=current_user.role,
+        mintCoins=current_user.mint_coins,
+        coinsEarnedToday=current_user.coins_earned_today,
+        raffleTickets=current_user.raffle_tickets,
+        dailyStreak=current_user.daily_streak,
+        walletBalanceInr=float(wallet.balance) if wallet else 0.0,
     )
 
 
