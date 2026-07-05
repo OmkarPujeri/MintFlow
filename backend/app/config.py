@@ -56,6 +56,10 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+# Signing keys that were once committed to git history — public, so must never
+# sign prod tokens even though they're long enough to pass the length check.
+_LEAKED_SECRET_KEYS = {"mintflow-super-secret-key-change-in-production"}
+
 # Fail-fast: refuse to boot production with dev-grade config. Cheaper to crash
 # on startup than to ship leaking tracebacks or a guessable signing key.
 if settings.is_production:
@@ -63,3 +67,5 @@ if settings.is_production:
         raise RuntimeError("DEBUG must be False when ENVIRONMENT=production")
     if "CHANGE_ME" in settings.SECRET_KEY or len(settings.SECRET_KEY) < 32:
         raise RuntimeError("Set a strong SECRET_KEY (>=32 chars) in production")
+    if settings.SECRET_KEY in _LEAKED_SECRET_KEYS:
+        raise RuntimeError("SECRET_KEY was leaked in git history — rotate it")
