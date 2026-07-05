@@ -51,16 +51,13 @@ goes through the repositories in `lib/repositories/`:
 - `ApiClient` (`lib/repositories/api_client.dart`) owns the base URL, the JWT
   Bearer header, and token storage.
 - `AppConfig` (`lib/config/app_config.dart`) toggles `useBackend`, `apiBaseUrl`,
-  and `googleClientId` — all overridable at build time via `--dart-define`.
+  and `googleClientId` — all set at build time from `dart_defines.json` (via
+  `--dart-define-from-file`).
 - Models parse API JSON with their `fromJson` factories (e.g.
   `lib/models/campaign.dart`).
 
 Run against the backend by passing the defines shown in **Run** above. With
-`USE_BACKEND=false` (the default) the app uses browser storage so it works with no
-backend at all.
-
-Config lives in `lib/config/app_config.dart` (`useBackend`, `apiBaseUrl`,
-`googleClientId`).
+`USE_BACKEND=false` the app uses browser storage so it works with no backend at all.
 
 ## Google Sign-In
 
@@ -70,10 +67,10 @@ Services (via `google_sign_in`) to get an ID token, and the backend verifies it 
 sign-in). It's disabled until you supply your own OAuth **Web Client ID**.
 
 **To enable it, follow §5b in [SETUP.md](SETUP.md)** — create a Web OAuth Client
-ID, add your origins, then set `GOOGLE_CLIENT_ID` in the backend `.env` and pass
-`--dart-define=GOOGLE_CLIENT_ID=...` to `flutter run`. Without it, the button shows
-a "not configured" hint and email/password login still works. The client *secret*
-is not used (ID-token verification only needs the client ID).
+ID, add your origins, then set `GOOGLE_CLIENT_ID` in **both** the backend `.env`
+and `dart_defines.json`. Without it, the button shows a "not configured" hint and
+email/password login still works. The client *secret* is not used (ID-token
+verification only needs the client ID, which is public).
 
 ## Run
 
@@ -84,15 +81,17 @@ from the repo root:
 # 1. Backend + Postgres + Redis (needs Docker + the .env files — see SETUP.md §4)
 docker compose up -d --build
 
-# 2. Frontend (one line; add GOOGLE_CLIENT_ID to enable Google login)
+# 2. Frontend — build settings come from dart_defines.json (repo root)
 flutter pub get
-flutter run -d chrome --web-port=5173 --dart-define=USE_BACKEND=true --dart-define=API_BASE_URL=http://localhost:8000
+flutter run -d chrome --web-port=5173 --dart-define-from-file=dart_defines.json
 ```
 
 Then open **http://localhost:5173**. API docs at **http://localhost:8000/docs**.
 
-To run the frontend standalone (no backend, browser-storage demo mode), omit the
-`--dart-define`s.
+Build/run settings (`USE_BACKEND`, `API_BASE_URL`, `GOOGLE_CLIENT_ID`) live in
+**`dart_defines.json`** — edit that file rather than passing long `--dart-define=`
+flags. To run standalone (no backend, browser-storage demo mode), set
+`USE_BACKEND` to `"false"` there.
 
 ## Verify
 

@@ -116,15 +116,17 @@ curl http://localhost:8000/health         # -> {"status":"healthy"}
 # API docs: http://localhost:8000/docs
 ```
 
-Now run the frontend (separate terminal, from repo root). **Put the whole
-command on one line** — the `\` line-continuation is a bash-ism and breaks in
-PowerShell:
+Now run the frontend (separate terminal, from repo root):
 ```sh
 flutter pub get
-flutter run -d chrome --web-port=5173 --dart-define=USE_BACKEND=true --dart-define=API_BASE_URL=http://localhost:8000 --dart-define=GOOGLE_CLIENT_ID=<your-client-id>
+flutter run -d chrome --web-port=5173 --dart-define-from-file=dart_defines.json
 ```
-> Omit the `GOOGLE_CLIENT_ID` define if you don't need Google login — the button
-> then shows a "not configured" hint and email/password login still works.
+> The build settings (`USE_BACKEND`, `API_BASE_URL`, `GOOGLE_CLIENT_ID`) live in
+> **`dart_defines.json`** at the repo root — edit that file to change the API URL
+> or Google client ID instead of typing long `--dart-define=` flags. It's
+> committed for convenience (the client ID is public; see §5b). Leave
+> `GOOGLE_CLIENT_ID` empty there to disable Google login — email/password still
+> works.
 
 Open **http://localhost:5173**.
 
@@ -161,7 +163,8 @@ secret is not used** and should not be committed.
    value** in two places:
    - the backend env (`GOOGLE_CLIENT_ID` in the root `.env`, §4a), then
      `docker compose up -d` to reload it;
-   - the Flutter `--dart-define=GOOGLE_CLIENT_ID=...` (§5).
+   - the frontend config file **`dart_defines.json`** at the repo root (used by
+     `--dart-define-from-file`, §5).
 
 When configured, the login page shows Google's official rendered button. First
 sign-in auto-creates a `company_admin` user with no local password.
@@ -292,7 +295,7 @@ of git). See §8.
 | `SECRET_KEY is missing` on `docker compose up` | You didn't create the root `.env` (see §4a). |
 | `docker` command fails / daemon error | Docker Desktop isn't running — start it and retry. |
 | "No account found" on login | The account isn't registered — register one (§5). Note `demo@mintflow.com` is easy to mistype as `mitflow`. |
-| Google button says "not configured" | `--dart-define=GOOGLE_CLIENT_ID` wasn't passed. A dart-define only applies on a full `flutter run` (not hot reload) — quit with `q` and relaunch (§5). |
+| Google button says "not configured" | `GOOGLE_CLIENT_ID` is empty in `dart_defines.json`, or you launched without `--dart-define-from-file`. Defines only apply on a full `flutter run` (not hot reload) — quit with `q` and relaunch (§5). |
 | Google popup: `origin_mismatch` | `http://localhost:5173` isn't in the OAuth client's Authorized JavaScript origins (§5b). |
 | `flutter: command not found` | Flutter not on PATH; reopen terminal after adding `C:\src\flutter\bin`. |
 | API up but login returns 500 | Postgres container not healthy — `docker compose ps`, check `docker logs mintflow-pg`. |
