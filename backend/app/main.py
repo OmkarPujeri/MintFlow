@@ -1,9 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.core.rate_limit import limiter
+from app.db.database import SessionLocal
+from app.dependencies import redis_client
 from app.api.v1 import auth, campaigns, feed, watch, interactions, rewards, wallet, analytics
 
 app = FastAPI(
@@ -49,5 +52,24 @@ def root():
 
 
 @app.get("/health", tags=["Health"])
-def health():
-    return {"status": "healthy"}
+def health(response: Response):
+    """Deep check: DB + Redis must both answer or the pod is unhealthy (503),
+    so load balancers pull it out of rotation instead of routing to a broken API."""
+    checks = {}
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        checks["database"] = "ok"
+    except Exception:
+        checks["database"] = "down"
+    try:
+        redis_client.ping()
+        checks["redis"] = "ok"
+    except Exception:
+        checks["redis"] = "down"
+
+    healthy = all(v == "ok" for v in checks.values())
+    if not healthy:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return {"status": "healthy" if healthy else "unhealthy", "checks": checks}
