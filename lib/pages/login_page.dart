@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../repositories/api_client.dart';
 import '../theme.dart';
 import '../widgets/section_card.dart';
 
@@ -20,8 +21,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController(text: 'admin@mintflow.app');
-  final _passwordController = TextEditingController(text: 'password');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _loading = false;
   bool _googleLoading = false;
 
@@ -32,16 +33,62 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.ink,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  /// Turn a raw error into a clear, production-style message.
+  String _friendlyAuthError(Object error) {
+    if (error is ApiException) {
+      if (error.statusCode == 401) {
+        return 'No account found with those credentials. '
+            'Check your email and password, or register first.';
+      }
+      if (error.statusCode == 429) {
+        return 'Too many attempts. Please wait a minute and try again.';
+      }
+      if (error.statusCode >= 500) {
+        return 'Server error. Please try again in a moment.';
+      }
+    }
+    return 'Could not sign in. Check your connection and try again.';
+  }
+
   Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Enter your email and password to continue.');
+      return;
+    }
     setState(() => _loading = true);
-    await widget.onLogin(_emailController.text, _passwordController.text);
-    if (mounted) setState(() => _loading = false);
+    try {
+      await widget.onLogin(email, password);
+    } catch (error) {
+      _showError(_friendlyAuthError(error));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _google() async {
     setState(() => _googleLoading = true);
-    await widget.onGoogleLogin();
-    if (mounted) setState(() => _googleLoading = false);
+    try {
+      await widget.onGoogleLogin();
+    } catch (error) {
+      _showError(_friendlyAuthError(error));
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
+    }
   }
 
   @override
@@ -207,29 +254,16 @@ class _HeroStat extends StatelessWidget {
   }
 }
 
-/// A lightweight Google "G" mark drawn with the brand colours (no asset).
+/// The official multi-colour Google "G" mark.
 class _GoogleGlyph extends StatelessWidget {
   const _GoogleGlyph();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 20,
-      height: 20,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: const Text(
-        'G',
-        style: TextStyle(
-          fontWeight: FontWeight.w900,
-          fontSize: 15,
-          color: Color(0xFF4285F4),
-          height: 1.0,
-        ),
-      ),
+    return SvgPicture.asset(
+      'assets/google_logo.svg',
+      width: 18,
+      height: 18,
     );
   }
 }
@@ -265,14 +299,16 @@ class _LoginCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Use the demo credentials or enter any email to continue.',
+            'Sign in with your account to continue.',
             style: TextStyle(color: AppColors.muted),
           ),
           const SizedBox(height: 28),
           TextField(
             controller: emailController,
+            keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
               labelText: 'Email',
+              hintText: 'demo@mintflow.com',
               prefixIcon: Icon(Icons.mail_outline),
             ),
           ),
@@ -283,6 +319,7 @@ class _LoginCard extends StatelessWidget {
             onSubmitted: (_) => loading ? null : onSubmit(),
             decoration: const InputDecoration(
               labelText: 'Password',
+              hintText: 'demo1234',
               prefixIcon: Icon(Icons.lock_outline),
             ),
           ),
@@ -341,7 +378,7 @@ class _LoginCard extends StatelessWidget {
           const SizedBox(height: 16),
           const Center(
             child: Text(
-              'admin@mintflow.app  •  password',
+              'Demo account:  demo@mintflow.com  •  demo1234',
               style: TextStyle(color: AppColors.faint, fontSize: 12.5),
             ),
           ),
