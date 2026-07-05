@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
-from app.dependencies import get_db, require_viewer
+from app.dependencies import get_db, require_viewer, pagination
 from app.models.user import User
 from app.models.wallet import Wallet, WalletTransaction
 from app.schemas.wallet import WalletOut, TransactionOut
@@ -21,10 +21,12 @@ def get_wallet(
 @router.get("/transactions", response_model=List[TransactionOut])
 def get_transactions(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_viewer)
+    current_user: User = Depends(require_viewer),
+    page: tuple[int, int] = Depends(pagination),
 ):
+    limit, offset = page
     wallet = db.query(Wallet).filter(Wallet.user_id == current_user.id).first()
     transactions = db.query(WalletTransaction).filter(
         WalletTransaction.wallet_id == wallet.id
-    ).order_by(WalletTransaction.created_at.desc()).all()
+    ).order_by(WalletTransaction.created_at.desc()).offset(offset).limit(limit).all()
     return transactions

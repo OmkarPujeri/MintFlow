@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
-from app.dependencies import get_db, require_company_admin
+from app.dependencies import get_db, require_company_admin, pagination
 from app.models.user import User
 from app.models.campaign import Campaign, CampaignStatus
 from app.models.campaign_interaction import CampaignInteraction, InteractionType, InteractionQuestion, QuestionType
@@ -174,11 +174,13 @@ def create_campaign(
 @router.get("/", response_model=List[CampaignResponse])
 def list_campaigns(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_company_admin)
+    current_user: User = Depends(require_company_admin),
+    page: tuple[int, int] = Depends(pagination),
 ):
+    limit, offset = page
     campaigns = db.query(Campaign).filter(
         Campaign.company_admin_id == current_user.id
-    ).order_by(Campaign.created_at.desc()).all()
+    ).order_by(Campaign.created_at.desc()).offset(offset).limit(limit).all()
     return [_build_campaign_response(c, db) for c in campaigns]
 
 

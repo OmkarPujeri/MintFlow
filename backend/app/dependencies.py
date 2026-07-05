@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from app.db.database import SessionLocal
 from app.core.security import decode_token, remaining_ttl
@@ -17,6 +17,15 @@ def blacklist_token(token: str) -> None:
     ttl = remaining_ttl(decode_token(token))
     if ttl > 0:
         redis_client.setex(f"blacklist:{token}", ttl, "1")
+
+
+def pagination(
+    limit: int = Query(50, ge=1, le=100, description="Max items to return"),
+    offset: int = Query(0, ge=0, description="Items to skip"),
+) -> tuple[int, int]:
+    """Shared list pagination. Bounds enforced by Query so a caller can't ask
+    for an unbounded page. Returns (limit, offset)."""
+    return limit, offset
 
 
 def get_db():
