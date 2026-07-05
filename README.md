@@ -15,7 +15,7 @@ Company-admin dashboard in **Flutter Web**, backed by a **FastAPI + PostgreSQL +
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker_Compose-ready-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-16_passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-22_passing-brightgreen)
 ![Status](https://img.shields.io/badge/status-pre--launch-orange)
 
 [**Setup Guide**](SETUP.md) · [**Deployment**](DEPLOYMENT.md) · [**API Contract**](API_CONTRACT.md) · [**PRD**](PRD.md)
@@ -47,8 +47,11 @@ earn coin rewards for genuine, verified attention. This repo is the **company
 admin dashboard** — create and manage campaigns, configure interactions, review
 responses, and track reward spend — plus the full backend that powers it.
 
-> The mobile **viewer** app is a later phase. Campaign videos are YouTube URLs
-> today (the app stores both the URL and the extracted video ID).
+> The mobile **viewer** app is now in active development under **[`viewer_app/`](viewer_app/README.md)**
+> (Flutter, Android-first) — auth, profile, and a sortable campaign **Discover**
+> feed are working against this same backend; watch → tasks → reward are next.
+> Campaign videos are YouTube URLs today (the app stores both the URL and the
+> extracted video ID).
 
 ---
 
@@ -186,8 +189,9 @@ pytest
 ```
 
 The backend suite (`backend/tests/`) covers the token primitives, the full auth
-flow including **logout revocation** and **refresh rotation**, RBAC, and list
-**pagination** — 16 tests, zero external services.
+flow including **logout revocation** and **refresh rotation**, RBAC, list
+**pagination**, and the **viewer feed + `/auth/me`** (serialization, `questionId`,
+watched-exclusion, boosted-first) — 22 tests, zero external services.
 
 ---
 
@@ -207,12 +211,14 @@ sizing, CORS, TLS) are in [DEPLOYMENT.md](DEPLOYMENT.md).**
 
 ```
 MintFlow/
-├── lib/                  # Flutter Web app
+├── lib/                  # Flutter Web dashboard (company admin)
 │   ├── pages/            #   screens (overview, campaigns, create, …)
 │   ├── widgets/          #   charts, shell, cards, states
 │   ├── repositories/     #   ApiClient + data repos (only layer touching HTTP)
 │   ├── state/            #   DashboardController (ChangeNotifier)
 │   └── models/           #   JSON-serializable models
+├── viewer_app/           # Flutter mobile viewer app (Android-first) — see its README
+│   └── lib/              #   login · Discover feed · profile (watch→reward WIP)
 ├── backend/              # FastAPI service
 │   ├── app/
 │   │   ├── api/v1/        #   routers: auth, campaigns, feed, watch, …

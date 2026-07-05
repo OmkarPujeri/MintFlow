@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../state/viewer_controller.dart';
 import '../theme.dart';
+import 'feed_page.dart';
 import 'profile_page.dart';
 
 /// Signed-in home: bottom nav across Feed / Wallet / Profile. Feed and Wallet
@@ -18,12 +19,12 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _titles = ['Feed', 'Wallet', 'Profile'];
+  static const _titles = ['Discover', 'Wallet', 'Profile'];
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const _ComingSoon(title: 'Feed', icon: Icons.play_circle_outline, phase: 'Phase 2'),
+      FeedPage(controller: widget.controller),
       const _ComingSoon(title: 'Wallet', icon: Icons.account_balance_wallet_outlined, phase: 'Phase 6'),
       ProfilePage(controller: widget.controller),
     ];
@@ -31,15 +32,18 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_index]),
-        backgroundColor: AppColors.panel,
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
+        titleSpacing: 20,
       ),
       body: pages[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle), label: 'Feed'),
+          NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Discover'),
           NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],

@@ -4,6 +4,7 @@ import 'pages/home_shell.dart';
 import 'pages/login_page.dart';
 import 'repositories/api_client.dart';
 import 'repositories/auth_repository.dart';
+import 'repositories/feed_repository.dart';
 import 'repositories/local_storage.dart';
 import 'state/viewer_controller.dart';
 import 'theme.dart';
@@ -15,7 +16,8 @@ Future<void> main() async {
   final storage = await LocalStorage.create();
   final api = ApiClient(storage);
   final auth = AuthRepository(api);
-  final controller = ViewerController(auth);
+  final feed = FeedRepository(api);
+  final controller = ViewerController(auth, feed);
   await controller.bootstrap(); // restore session if a token is persisted
 
   runApp(MintFlowViewerApp(controller: controller));

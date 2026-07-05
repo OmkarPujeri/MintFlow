@@ -1,15 +1,28 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/campaign.dart';
 import '../models/viewer.dart';
 import '../repositories/api_client.dart';
 import '../repositories/auth_repository.dart';
+import '../repositories/feed_repository.dart';
+
+/// How the discover list is ordered.
+enum FeedSort { payout, newest }
+
+extension FeedSortLabel on FeedSort {
+  String get label => switch (this) {
+        FeedSort.payout => 'Highest payout',
+        FeedSort.newest => 'Newest',
+      };
+}
 
 /// Single reactive source of truth for the viewer app. Widgets rebuild via
-/// [ListenableBuilder]. Feed and watch-session state get added in later phases.
+/// [ListenableBuilder]. Watch-session state gets added in a later phase.
 class ViewerController extends ChangeNotifier {
-  ViewerController(this._auth);
+  ViewerController(this._auth, this._feed);
 
   final AuthRepository _auth;
+  final FeedRepository _feed;
 
   Viewer? _viewer;
   Viewer? get viewer => _viewer;
@@ -53,9 +66,55 @@ class ViewerController extends ChangeNotifier {
     }
   }
 
+  // ---- Feed / discover ------------------------------------------------------
+
+  List<Campaign> _campaigns = [];
+  bool _feedLoading = false;
+  String? _feedError;
+  FeedSort _sort = FeedSort.payout;
+
+  bool get feedLoading => _feedLoading;
+  String? get feedError => _feedError;
+  FeedSort get sort => _sort;
+
+  /// Campaigns ordered by the active sort.
+  List<Campaign> get feedCampaigns {
+    final list = [..._campaigns];
+    switch (_sort) {
+      case FeedSort.payout:
+        list.sort((a, b) => b.rewardPerCompletion.compareTo(a.rewardPerCompletion));
+      case FeedSort.newest:
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+    return list;
+  }
+
+  Future<void> loadFeed() async {
+    _feedLoading = true;
+    _feedError = null;
+    notifyListeners();
+    try {
+      _campaigns = await _feed.list();
+    } catch (e) {
+      _feedError = e is ApiException
+          ? 'Could not load campaigns (${e.statusCode}).'
+          : 'Could not reach the server.';
+    }
+    _feedLoading = false;
+    notifyListeners();
+  }
+
+  void setSort(FeedSort value) {
+    if (value == _sort) return;
+    _sort = value;
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await _auth.logout();
     _viewer = null;
+    _campaigns = [];
+    _feedError = null;
     notifyListeners();
   }
 

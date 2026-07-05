@@ -36,7 +36,7 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  _Stat(label: 'Mint Coins', value: '${v?.mintCoins ?? 0}', icon: Icons.toll),
+                  _Stat(label: 'Mint Coins', value: '${v?.mintCoins ?? 0}', icon: Icons.monetization_on),
                   const SizedBox(width: 12),
                   _Stat(label: 'Day Streak', value: '${v?.dailyStreak ?? 0}', icon: Icons.local_fire_department),
                 ],

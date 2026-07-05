@@ -109,6 +109,36 @@ A `docker-compose.override.yml` that bind-mounts `backend/` and runs
 `uvicorn --reload` so backend edits don't need an image rebuild. Convenience
 only; unrelated to the production deploy.
 
+### 3.7 Mobile viewer app → Play Store  *(new track — `viewer_app/`)*
+The Android-first viewer app ships as its own artifact; the dashboard host is
+irrelevant to it. Before a release build:
+
+1. **Point at the production API over HTTPS.** Build with prod defines, not the
+   dev `10.0.2.2` file:
+   ```sh
+   cd viewer_app
+   flutter build appbundle \
+     --dart-define=API_BASE_URL=https://your-api.example.com \
+     --dart-define=GOOGLE_CLIENT_ID=<web oauth client id>
+   ```
+   Android blocks cleartext `http://` in release — the API **must** be `https`.
+2. **Release manifest** (`android/app/src/main/AndroidManifest.xml`): add
+   `<uses-permission android:name="android.permission.INTERNET"/>` (debug has it
+   automatically; release does not). Do **not** add `usesCleartextTraffic` there —
+   it's intentionally debug-only.
+3. **App signing** — generate an upload keystore and wire it in
+   `android/app/build.gradle` + `key.properties` (keep the keystore out of git).
+   Or use Play App Signing and upload the `.aab`.
+4. **Native Google Sign-In** (if enabling): create an **Android** OAuth client
+   (package name + SHA-1) in Google Cloud, keep the **Web** client id as the
+   backend's `GOOGLE_CLIENT_ID` / the app's `serverClientId`, and drop
+   `google-services.json` into `android/app/`.
+5. **Anything compiled into the `.aab` is extractable** — ship only public config
+   (client id, base URL). No secrets in `--dart-define`.
+
+> Only files `viewer_app/` imports end up in the bundle — the web dashboard code
+> in the repo root is never included, even though it's the same repo.
+
 ---
 
 ## 4. Gotchas flagged during hardening (read before you deploy)
@@ -165,4 +195,10 @@ Use a managed Redis with persistence for prod.
 - [ ] Managed Postgres backups enabled.
 - [ ] `SENTRY_DSN` set and a test error shows up in Sentry (optional).
 - [ ] Google Sign-In works from the prod domain (if enabled).
+
+**Mobile viewer app (if releasing — §3.7):**
+- [ ] Release build points at the **HTTPS** production API (not `10.0.2.2`).
+- [ ] `INTERNET` permission in the release manifest; no `usesCleartextTraffic`.
+- [ ] Upload keystore / Play App Signing configured; `.aab` builds.
+- [ ] No secrets baked into `--dart-define` (client id + base URL only).
 </content>

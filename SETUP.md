@@ -33,8 +33,11 @@ Install these first:
    (must be **running** before any `docker` command)
 3. **Flutter SDK 3.44+** — https://docs.flutter.dev/get-started/install
    - Unzip to e.g. `C:\src\flutter`, add `C:\src\flutter\bin` to PATH, then
-     open a **new** terminal and run `flutter doctor` (Flutter + Chrome must be ✓;
-     Android/Visual Studio warnings are fine — we only build for web).
+     open a **new** terminal and run `flutter doctor` (Flutter + Chrome must be ✓).
+   - **For the dashboard only**, Android/Visual Studio warnings are fine (web build).
+   - **For the mobile viewer app** (`viewer_app/`, §5c) you additionally need
+     **Android Studio** + the Flutter/Dart plugins + an Android emulator — the
+     Android toolchain must be ✓ in `flutter doctor`.
 
 Python is **not required on the host** — it runs inside the backend container.
 (Optional: install Python 3.13 only if you want to run the backend directly on
@@ -177,6 +180,31 @@ step 4 doesn't exactly match (scheme, host, and port); a `503` from
 
 ---
 
+## 5c. Run the viewer mobile app (`viewer_app/`)
+
+The Android-first viewer app is a **separate Flutter project** with its own
+`README`. Short version:
+
+```sh
+# Backend must be running (Docker or host) on :8000.
+# Start an Android emulator (Android Studio → Device Manager ▶), then:
+cd viewer_app
+flutter pub get
+flutter run --dart-define-from-file=dart_defines.dev.json
+```
+
+- **`API_BASE_URL` must be `http://10.0.2.2:8000`** — the emulator's alias for the
+  host's localhost (already set in `viewer_app/dart_defines.dev.json`). `localhost`
+  from inside the emulator points at the emulator itself and will fail.
+- Register a **viewer** account in-app (password: 8+ chars, a letter and a number).
+- **Discover shows only _active_ campaigns** — publish one in the dashboard first
+  (a draft never appears in the feed).
+- Target the **emulator**, not "Windows" (this project is Android/iOS only).
+
+Full phase status, architecture, and gotchas: **[`viewer_app/README.md`](viewer_app/README.md)**.
+
+---
+
 ## 6. Optional — run the backend on the host (hot-reload dev)
 
 Nice when actively editing backend code (the container has no `--reload`, so it
@@ -216,6 +244,13 @@ cd backend && pip install -r requirements.txt -r requirements-dev.txt && pytest
 
 Recent work hardened the app toward production. Key commits:
 
+- `feat(mobile)` — **Viewer mobile app** (`viewer_app/`, Flutter Android-first).
+  Phase 0 added the backend fixes it needs (shared feed serializer, `questionId`
+  on interactions, `GET /auth/me`, watched-campaign exclusion, boosted-first
+  ordering — +6 tests). Phases 1–2 built the app itself: auth (email/password +
+  Google), mobile `shared_preferences` storage, bottom-nav shell, live Profile,
+  and a sortable **Discover** campaign feed. See
+  [`viewer_app/README.md`](viewer_app/README.md) for phase status.
 - `feat(ui)` — **Frontend polish pass**: top-aligned page/empty-state layout
   (no more centered "floating" content), chart empty-states (no flat lines on
   zero data), an advertiser **CPV-first budget calculator** with centralized
@@ -227,14 +262,15 @@ Recent work hardened the app toward production. Key commits:
   per token); a **prod config guard** that refuses to boot with `DEBUG=True` or a
   weak `SECRET_KEY`; **Gunicorn** multi-worker serving; a **deep `/health`**
   (DB + Redis); **structured JSON logging** + optional **Sentry**; **pagination**
-  on list endpoints; and a **pytest suite** (`backend/tests/`, 16 tests, no
+  on list endpoints; and a **pytest suite** (`backend/tests/`, 22 tests, no
   external services).
 - `feat(auth)` — **Real Google OAuth sign-in**. Frontend uses the `google_sign_in`
   package + Google Identity Services to obtain an ID token; the backend verifies
   it at `POST /api/v1/auth/google` (checking signature, expiry, and `aud` ==
   `GOOGLE_CLIENT_ID`), then finds-or-creates the user and issues the app JWT.
   `users.password_hash` is now nullable (Google users have no local password —
-  migration `a1b2c3d4e5f6`). See §5b to enable it.
+  migration `a1b2c3d4e5f6`). See §5b to enable it. *(The viewer app reuses this
+  same `/auth/google` endpoint with a native Android OAuth client.)*
 - `fix(auth)` — login now shows clear error messages (no more infinite spinner),
   demo credentials are placeholder hints instead of prefilled values, and the
   Google button uses the official multi-color icon.
@@ -292,9 +328,12 @@ The app runs end-to-end locally. Status verified against the current code.
 12. **CI/CD** (GitHub Actions): lint → test → build → deploy.
 
 **🟢 Quality & maintainability (still open)**
-13. **Backend tests** (pytest) for auth / campaigns / rewards — none exist yet.
+13. **Backend tests** — ✅ pytest suite exists (22 tests: auth, RBAC, pagination,
+    viewer feed + `/me`). Still open: campaigns CRUD depth and rewards/claim flow.
 14. **Real video storage** — AWS S3 keys are empty; campaigns currently rely on
     YouTube URLs only.
+15. **Viewer app remaining phases** — watch (native player) → tasks → reward →
+    wallet → release prep. See [`viewer_app/README.md`](viewer_app/README.md).
 
 ✅ **Also previously completed:** real Google OAuth, login error handling,
 Dockerized full stack, security hardening (CORS, rate limiting, password policy,
