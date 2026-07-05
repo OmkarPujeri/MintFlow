@@ -95,9 +95,14 @@ If you put a custom domain or your own load balancer in front, provision certs
 breaks the browser app and Google Sign-In.
 
 ### 3.5 CI/CD  *(roadmap #12)*
-GitHub Actions: `flutter analyze` + `flutter test` + `pytest` (once #13 lands) →
-build → deploy. Most hosts also offer deploy-on-push straight from the repo,
-which is the lazier first step.
+GitHub Actions: `flutter analyze` + `flutter test` + `pytest` → build → deploy.
+The backend suite runs with no services (SQLite + fakeredis), so CI needs no
+Postgres/Redis containers:
+```sh
+cd backend && pip install -r requirements.txt -r requirements-dev.txt && pytest
+```
+Most hosts also offer deploy-on-push straight from the repo, which is the lazier
+first step.
 
 ### 3.6 Dev hot-reload override  *(roadmap #11 — local only, not prod)*
 A `docker-compose.override.yml` that bind-mounts `backend/` and runs

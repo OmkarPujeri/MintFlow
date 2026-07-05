@@ -1,113 +1,144 @@
-# MintFlow Company Dashboard
+<div align="center">
 
-Production-style **Flutter Web** dashboard for company admins to create campaigns,
-configure quiz/survey/poll/feedback interactions, review responses, and track
-reward spend — backed by a **FastAPI + PostgreSQL + Redis** API.
+<img src="assets/brand_logo.svg" alt="MintFlow" width="120" />
 
-> **Setting up on a new machine? Read [SETUP.md](SETUP.md)** — it's the complete,
-> step-by-step onboarding guide (Docker, env files, running the stack, Google
-> Sign-In, and the production roadmap). This README is the high-level overview.
->
-> **Deploying to production? Read [DEPLOYMENT.md](DEPLOYMENT.md)** — the hosting
-> checklist, required env vars, and the config-time gotchas (worker/DB-connection
-> sizing, CORS, Sentry, HTTPS).
+# MintFlow
 
-## Current Scope
+**A verified-attention ad network — brands pay for watched, rewarded views.**
 
-- **Full stack**: Flutter Web frontend + FastAPI backend (JWT auth, Postgres,
-  Redis), all runnable with one `docker compose up` (see SETUP.md).
-- Polished SaaS UI with charts and animations.
-- Clean repository layer behind a reactive `DashboardController`; the UI never
-  touches storage/HTTP directly.
-- Auth: email/password **and real Google OAuth** (see below).
-- Campaign videos are YouTube URLs; the app stores both the original URL and the
-  extracted YouTube video ID.
-- Mobile viewer app is a later phase.
-- Existing HTML prototype in `../dashboard` is kept as reference.
+Company-admin dashboard in **Flutter Web**, backed by a **FastAPI + PostgreSQL + Redis** API.
+
+<br />
+
+![Flutter](https://img.shields.io/badge/Flutter-3.44+-02569B?logo=flutter&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.13-009688?logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker_Compose-ready-2496ED?logo=docker&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-16_passing-brightgreen)
+![Status](https://img.shields.io/badge/status-pre--launch-orange)
+
+[**Setup Guide**](SETUP.md) · [**Deployment**](DEPLOYMENT.md) · [**API Contract**](API_CONTRACT.md) · [**PRD**](PRD.md)
+
+</div>
+
+---
+
+## Contents
+
+- [What is MintFlow](#what-is-mintflow)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Project structure](#project-structure)
+- [Roadmap](#roadmap)
+
+---
+
+## What is MintFlow
+
+MintFlow is a **verified attention network**: companies fund video campaigns,
+viewers watch and complete interactions (quiz / survey / poll / feedback), and
+earn coin rewards for genuine, verified attention. This repo is the **company
+admin dashboard** — create and manage campaigns, configure interactions, review
+responses, and track reward spend — plus the full backend that powers it.
+
+> The mobile **viewer** app is a later phase. Campaign videos are YouTube URLs
+> today (the app stores both the URL and the extracted video ID).
+
+---
 
 ## Features
 
-- **Overview** — animated KPI cards (count-up), completion-trend area chart, interaction-mix donut, spend-by-campaign bars.
-- **Campaigns** — live search + status filter chips; edit, pause/resume, complete, duplicate, delete (with confirm dialog + toasts).
-- **Create / Edit** — one sectioned, validated form reused for both, with a live phone preview of the viewer experience.
-- **Interactions / Responses / Spend** — task cards, response mix donut, budget-health gauge, spend trend, reward transactions.
-- **Settings** — editable company profile that persists to local storage.
-- Responsive shell (full sidebar → icon rail → mobile drawer), animated section transitions, skeleton loaders, and empty states.
+| | |
+|---|---|
+| 📊 **Overview** | Animated KPI cards (count-up), completion-trend area chart, interaction-mix donut, spend-by-campaign bars. |
+| 🎯 **Campaigns** | Live search + status filter chips; edit, pause/resume, complete, duplicate, delete (confirm dialog + toasts). |
+| ✏️ **Create / Edit** | One sectioned, validated form for both, with a live phone preview of the viewer experience. |
+| 💬 **Interactions / Responses / Spend** | Task cards, response-mix donut, budget-health gauge, spend trend, reward transactions. |
+| ⚙️ **Settings** | Editable company profile persisted locally. |
+| 🔐 **Auth** | Email/password **and real Google OAuth**, JWT with server-side token revocation. |
+| 🖥️ **Responsive shell** | Full sidebar → icon rail → mobile drawer, animated transitions, skeleton loaders, empty states. |
 
-## Tech
+---
 
-- `fl_chart` — charts.
-- `flutter_animate` — entrance / micro-animations.
-- `google_fonts` — Plus Jakarta Sans (headings) + Inter (body).
-- `google_sign_in` / `google_sign_in_web` — real Google OAuth on the web.
-- `http` — API client for the backend (see below).
-- State: `ChangeNotifier` (`lib/state/dashboard_controller.dart`) consumed via `ListenableBuilder`.
+## Tech stack
 
-## Architecture: how the frontend talks to the backend
+**Frontend** — Flutter Web · `fl_chart` (charts) · `flutter_animate` (motion) ·
+`google_fonts` (Plus Jakarta Sans + Inter) · `google_sign_in` (OAuth) · `http`.
+State via `ChangeNotifier` (`lib/state/dashboard_controller.dart`) consumed with
+`ListenableBuilder` — the UI never touches storage or HTTP directly.
 
-The backend lives in **`backend/`** (FastAPI). Routes are under `/api/v1/...`
-(`auth`, `campaigns`, `feed`, `watch`, `interactions`, `rewards`, `wallet`,
-`analytics`) — browse them live at `http://localhost:8000/docs`.
+**Backend** — FastAPI (Python 3.13) · SQLAlchemy + Alembic · PostgreSQL 16 ·
+Redis 7 (rate limiting + token blacklist) · JWT (python-jose) · Gunicorn +
+uvicorn workers · structured JSON logging · optional Sentry.
 
-On the Flutter side, the UI never touches storage or HTTP directly — everything
-goes through the repositories in `lib/repositories/`:
+---
 
-- `ApiClient` (`lib/repositories/api_client.dart`) owns the base URL, the JWT
-  Bearer header, and token storage.
-- `AppConfig` (`lib/config/app_config.dart`) toggles `useBackend`, `apiBaseUrl`,
-  and `googleClientId` — all set at build time from `dart_defines.json` (via
-  `--dart-define-from-file`).
-- Models parse API JSON with their `fromJson` factories (e.g.
-  `lib/models/campaign.dart`).
+## Architecture
 
-Run against the backend by passing the defines shown in **Run** above. With
-`USE_BACKEND=false` the app uses browser storage so it works with no backend at all.
+```
+┌─────────────────┐      HTTPS / JSON       ┌──────────────────────┐
+│  Flutter Web     │  ───────────────────▶  │  FastAPI  /api/v1/…    │
+│  dashboard       │  ◀───────────────────  │  auth · campaigns ·    │
+│  (lib/)          │      JWT Bearer         │  feed · watch · …      │
+└─────────────────┘                         └───────┬──────┬────────┘
+                                                    │      │
+                                            ┌───────▼─┐  ┌─▼───────┐
+                                            │ Postgres │  │  Redis   │
+                                            └──────────┘  └─────────┘
+```
 
-## Google Sign-In
+The Flutter side routes everything through `lib/repositories/`:
 
-Real Google OAuth is implemented end-to-end: the web app uses Google Identity
-Services (via `google_sign_in`) to get an ID token, and the backend verifies it at
-`POST /api/v1/auth/google` before issuing the app JWT (creating the user on first
-sign-in). It's disabled until you supply your own OAuth **Web Client ID**.
+- **`ApiClient`** owns the base URL, the JWT Bearer header, and token storage.
+- **`AppConfig`** toggles `useBackend`, `apiBaseUrl`, and `googleClientId` — all
+  set at build time from **`dart_defines.json`** (via `--dart-define-from-file`).
+- Models parse API JSON with their `fromJson` factories.
 
-**To enable it, follow §5b in [SETUP.md](SETUP.md)** — create a Web OAuth Client
-ID, add your origins, then set `GOOGLE_CLIENT_ID` in **both** the backend `.env`
-and `dart_defines.json`. Without it, the button shows a "not configured" hint and
-email/password login still works. The client *secret* is not used (ID-token
-verification only needs the client ID, which is public).
+Backend routes live under `/api/v1/…` (`auth`, `campaigns`, `feed`, `watch`,
+`interactions`, `rewards`, `wallet`, `analytics`) — browse them live at
+`http://localhost:8000/docs`. With `USE_BACKEND=false` the app falls back to
+browser storage and runs with no backend at all.
 
-## Run
+---
 
-Full setup (backend + frontend) is in **[SETUP.md](SETUP.md)**. The short version,
-from the repo root:
+## Quick start
+
+> Full, step-by-step onboarding (Docker, env files, Google Sign-In) is in
+> **[SETUP.md](SETUP.md)**. The short version:
+
+**Prerequisites:** Docker Desktop (running) + Flutter SDK 3.44+.
 
 ```sh
-# 1. Backend + Postgres + Redis (needs Docker + the .env files — see SETUP.md §4)
+# 1. Clone
+git clone https://github.com/OmkarPujeri/MintFlow.git && cd MintFlow
+
+# 2. Create env files from templates (see SETUP.md §4 for values)
+cp .env.example .env
+cp backend/.env.example backend/.env
+
+# 3. Backend + Postgres + Redis — one command (migrations auto-run)
 docker compose up -d --build
 
-# 2. Frontend — build settings come from dart_defines.json (repo root)
+# 4. Frontend — build settings come from dart_defines.json
 flutter pub get
 flutter run -d chrome --web-port=5173 --dart-define-from-file=dart_defines.json
 ```
 
-Then open **http://localhost:5173**. API docs at **http://localhost:8000/docs**.
-
-Build/run settings (`USE_BACKEND`, `API_BASE_URL`, `GOOGLE_CLIENT_ID`) live in
-**`dart_defines.json`** — edit that file rather than passing long `--dart-define=`
-flags. To run standalone (no backend, browser-storage demo mode), set
-`USE_BACKEND` to `"false"` there.
-
-## Verify
+Open **http://localhost:5173** · API docs at **http://localhost:8000/docs**.
 
 ```sh
-flutter analyze
-flutter test
+curl http://localhost:8000/health
+# -> {"status":"healthy","checks":{"database":"ok","redis":"ok"}}
 ```
 
-## First Login
-
-The database starts empty. Register an account via the API (password: 8+ chars
-with a letter and a number), then log in from the UI:
+**First login** — the DB starts empty. Register (password: 8+ chars, a letter and
+a number), then log in from the UI:
 
 ```sh
 curl -X POST http://localhost:8000/api/v1/auth/register \
@@ -115,15 +146,97 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
   -d '{"email":"demo@mintflow.com","password":"demo1234","role":"company_admin"}'
 ```
 
-(On Windows PowerShell use `curl.exe`.) Or use Google Sign-In once configured.
+_(On Windows PowerShell use `curl.exe`.) Or use Google Sign-In once configured._
 
-## YouTube Video Strategy
+---
 
-MintFlow will upload campaign videos to YouTube and store the YouTube URL in the campaign record. The app extracts the YouTube video ID from common URL formats such as:
+## Configuration
 
-- `https://www.youtube.com/watch?v=VIDEO_ID`
-- `https://youtu.be/VIDEO_ID`
-- `https://www.youtube.com/embed/VIDEO_ID`
-- `https://www.youtube.com/shorts/VIDEO_ID`
+Build/run settings live in **`dart_defines.json`** (repo root) — edit that file
+instead of passing long `--dart-define=` flags:
 
-For reward verification, use the YouTube IFrame Player API events in the viewer app to track playback state, current time, duration, and completion percentage. For official YouTube reporting such as channel/video views and watch-time reports, use the YouTube Analytics or Reporting APIs later.
+| Key | Purpose |
+|-----|---------|
+| `USE_BACKEND` | `"false"` = browser-storage demo mode, no backend needed. |
+| `API_BASE_URL` | Backend URL (`http://localhost:8000` locally). |
+| `GOOGLE_CLIENT_ID` | Web OAuth client ID; empty disables Google login. |
+
+**Google Sign-In** is implemented end-to-end (the backend verifies the Google ID
+token at `POST /api/v1/auth/google` before issuing the app JWT). It's off until
+you supply your own Web OAuth Client ID in **both** the backend `.env` and
+`dart_defines.json` — see **[SETUP.md §5b](SETUP.md)**. The client _secret_ is
+never used or committed.
+
+Backend secrets (`SECRET_KEY`, `DATABASE_URL`, …) come from `backend/.env` or
+host env vars — see [SETUP.md](SETUP.md) and [DEPLOYMENT.md](DEPLOYMENT.md).
+
+---
+
+## Testing
+
+```sh
+# Frontend
+flutter analyze
+flutter test
+
+# Backend (no DB/Redis needed — SQLite + fakeredis)
+cd backend
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
+
+The backend suite (`backend/tests/`) covers the token primitives, the full auth
+flow including **logout revocation** and **refresh rotation**, RBAC, and list
+**pagination** — 16 tests, zero external services.
+
+---
+
+## Deployment
+
+The code is production-hardened (token revocation, prod config guard, multi-worker
+Gunicorn, deep health check, JSON logging + Sentry, pagination). Going live is
+mostly **configuration** — managed Postgres/Redis, a container host, a static
+frontend host, HTTPS.
+
+**➡️ Full hosting walkthrough, env vars, and the gotchas (worker/DB-connection
+sizing, CORS, TLS) are in [DEPLOYMENT.md](DEPLOYMENT.md).**
+
+---
+
+## Project structure
+
+```
+MintFlow/
+├── lib/                  # Flutter Web app
+│   ├── pages/            #   screens (overview, campaigns, create, …)
+│   ├── widgets/          #   charts, shell, cards, states
+│   ├── repositories/     #   ApiClient + data repos (only layer touching HTTP)
+│   ├── state/            #   DashboardController (ChangeNotifier)
+│   └── models/           #   JSON-serializable models
+├── backend/              # FastAPI service
+│   ├── app/
+│   │   ├── api/v1/        #   routers: auth, campaigns, feed, watch, …
+│   │   ├── models/        #   SQLAlchemy models
+│   │   ├── schemas/       #   Pydantic schemas
+│   │   ├── core/          #   security, rate limit, logging
+│   │   └── db/            #   engine + Alembic migrations
+│   └── tests/            #   pytest suite
+├── docker-compose.yml    # Postgres + Redis + API
+├── dart_defines.json     # frontend build config
+├── SETUP.md · DEPLOYMENT.md · API_CONTRACT.md · PRD.md
+```
+
+---
+
+## Roadmap
+
+Production-readiness is tracked in **[SETUP.md §9](SETUP.md)**. Done: token
+revocation, prod config guard, multi-worker API, deep health check, structured
+logging + Sentry, pagination, backend tests. Remaining: managed Postgres/Redis,
+hosting + HTTPS, CI/CD ([DEPLOYMENT.md](DEPLOYMENT.md)), and real S3 video storage.
+
+<div align="center">
+<br />
+<sub>Private project · all rights reserved · built with Flutter + FastAPI</sub>
+</div>
+</content>

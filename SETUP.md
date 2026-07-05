@@ -201,8 +201,11 @@ Uses `backend/.env` (host talks to `localhost:5432`). Stop the containerized
 docker compose up -d          # start / resume the stack (data persists)
 docker compose stop           # stop, keep data
 docker compose up -d --build  # rebuild API after backend code changes
-docker logs -f mintflow-api   # tail API logs
+docker logs -f mintflow-api   # tail API logs (structured JSON, one line per request)
 docker compose ps             # container status
+
+# Backend tests (no DB/Redis needed — SQLite + fakeredis):
+cd backend && pip install -r requirements.txt -r requirements-dev.txt && pytest
 
 # DANGER: `docker compose down -v` deletes the DB volume (wipes all data).
 ```
@@ -213,6 +216,13 @@ docker compose ps             # container status
 
 Recent work hardened the app toward production. Key commits:
 
+- `feat(*)` — **Production-hardening batch** (see [DEPLOYMENT.md](DEPLOYMENT.md)):
+  server-side **token revocation** on logout + refresh rotation (unique `jti`
+  per token); a **prod config guard** that refuses to boot with `DEBUG=True` or a
+  weak `SECRET_KEY`; **Gunicorn** multi-worker serving; a **deep `/health`**
+  (DB + Redis); **structured JSON logging** + optional **Sentry**; **pagination**
+  on list endpoints; and a **pytest suite** (`backend/tests/`, 16 tests, no
+  external services).
 - `feat(auth)` — **Real Google OAuth sign-in**. Frontend uses the `google_sign_in`
   package + Google Identity Services to obtain an ID token; the backend verifies
   it at `POST /api/v1/auth/google` (checking signature, expiry, and `aud` ==
