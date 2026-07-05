@@ -18,8 +18,14 @@ __pycache__/
 *.py[cod]
 venv/
 .venv/
+ENV/
 
 # Secrets / local env
 .env
 *.env
+backend/.env
 !*.env.example
+
+# Database
+*.db
+*.sqlite
