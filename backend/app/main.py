@@ -10,6 +10,8 @@ app = FastAPI(
     title="MintFlow API",
     description="Verified Attention Network Backend",
     version="1.0.0",
+    # In prod DEBUG=False so 500s don't leak stack traces to clients.
+    debug=settings.DEBUG,
 )
 
 # Rate limiting (Redis-backed). Endpoints opt in via @limiter.limit(...).

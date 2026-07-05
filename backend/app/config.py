@@ -52,3 +52,11 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Fail-fast: refuse to boot production with dev-grade config. Cheaper to crash
+# on startup than to ship leaking tracebacks or a guessable signing key.
+if settings.is_production:
+    if settings.DEBUG:
+        raise RuntimeError("DEBUG must be False when ENVIRONMENT=production")
+    if "CHANGE_ME" in settings.SECRET_KEY or len(settings.SECRET_KEY) < 32:
+        raise RuntimeError("Set a strong SECRET_KEY (>=32 chars) in production")
