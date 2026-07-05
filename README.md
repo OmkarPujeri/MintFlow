@@ -1,14 +1,24 @@
 # MintFlow Company Dashboard
 
-Production-style Flutter Web dashboard for company admins to create campaigns, configure quiz/survey/poll/feedback interactions, review responses, and track reward spend.
+Production-style **Flutter Web** dashboard for company admins to create campaigns,
+configure quiz/survey/poll/feedback interactions, review responses, and track
+reward spend — backed by a **FastAPI + PostgreSQL + Redis** API.
+
+> **Setting up on a new machine? Read [SETUP.md](SETUP.md)** — it's the complete,
+> step-by-step onboarding guide (Docker, env files, running the stack, Google
+> Sign-In, and the production roadmap). This README is the high-level overview.
 
 ## Current Scope
 
-- Flutter Web first, polished SaaS UI with charts and animations.
-- Backend-ready repository layer behind a reactive `DashboardController`.
-- Browser local storage for session and campaign persistence.
-- Campaign videos are YouTube URLs; the app stores both the original URL and extracted YouTube video ID.
-- No backend or mobile viewer app in this phase.
+- **Full stack**: Flutter Web frontend + FastAPI backend (JWT auth, Postgres,
+  Redis), all runnable with one `docker compose up` (see SETUP.md).
+- Polished SaaS UI with charts and animations.
+- Clean repository layer behind a reactive `DashboardController`; the UI never
+  touches storage/HTTP directly.
+- Auth: email/password **and real Google OAuth** (see below).
+- Campaign videos are YouTube URLs; the app stores both the original URL and the
+  extracted YouTube video ID.
+- Mobile viewer app is a later phase.
 - Existing HTML prototype in `../dashboard` is kept as reference.
 
 ## Features
@@ -25,76 +35,84 @@ Production-style Flutter Web dashboard for company admins to create campaigns, c
 - `fl_chart` — charts.
 - `flutter_animate` — entrance / micro-animations.
 - `google_fonts` — Plus Jakarta Sans (headings) + Inter (body).
+- `google_sign_in` / `google_sign_in_web` — real Google OAuth on the web.
 - `http` — API client for the backend (see below).
 - State: `ChangeNotifier` (`lib/state/dashboard_controller.dart`) consumed via `ListenableBuilder`.
 
-## Connecting a backend (FastAPI)
+## Architecture: how the frontend talks to the backend
 
-The UI never touches storage directly — everything goes through the repositories
-in `lib/repositories/`. To go live:
+The backend lives in **`backend/`** (FastAPI). Routes are under `/api/v1/...`
+(`auth`, `campaigns`, `feed`, `watch`, `interactions`, `rewards`, `wallet`,
+`analytics`) — browse them live at `http://localhost:8000/docs`.
 
-1. Build a FastAPI backend that returns JSON in the same shape as
-   `Campaign.toJson()` (see `lib/models/campaign.dart`). Endpoints needed:
-   `POST /auth/login`, `POST /auth/google`, `GET /auth/me`, `PUT /auth/profile`,
-   `GET/POST /campaigns`, `PUT /campaigns/{id}`, `PATCH /campaigns/{id}/status`,
-   `DELETE /campaigns/{id}`, `POST /campaigns/{id}/duplicate`,
-   `GET /campaigns/{id}/responses`, `GET /transactions`, `GET /analytics/*`.
-2. Enable CORS for the Flutter Web origin.
-3. Use `ApiClient` (`lib/repositories/api_client.dart`) — it already handles the
-   base URL, JWT Bearer header, and token storage. Write API-backed repository
-   classes that call `apiClient.get/post/...` and parse with the existing
-   `fromJson` factories, then inject them in `main.dart`.
-4. Run with the backend enabled:
+On the Flutter side, the UI never touches storage or HTTP directly — everything
+goes through the repositories in `lib/repositories/`:
 
-```sh
-flutter run -d chrome \
-  --dart-define=USE_BACKEND=true \
-  --dart-define=API_BASE_URL=http://localhost:8000
-```
+- `ApiClient` (`lib/repositories/api_client.dart`) owns the base URL, the JWT
+  Bearer header, and token storage.
+- `AppConfig` (`lib/config/app_config.dart`) toggles `useBackend`, `apiBaseUrl`,
+  and `googleClientId` — all overridable at build time via `--dart-define`.
+- Models parse API JSON with their `fromJson` factories (e.g.
+  `lib/models/campaign.dart`).
+
+Run against the backend by passing the defines shown in **Run** above. With
+`USE_BACKEND=false` (the default) the app uses browser storage so it works with no
+backend at all.
 
 Config lives in `lib/config/app_config.dart` (`useBackend`, `apiBaseUrl`,
 `googleClientId`).
 
 ## Google Sign-In
 
-A "Continue with Google" button is on the login screen. It currently creates a
-demo session so the flow works with no setup. To make it real:
+Real Google OAuth is implemented end-to-end: the web app uses Google Identity
+Services (via `google_sign_in`) to get an ID token, and the backend verifies it at
+`POST /api/v1/auth/google` before issuing the app JWT (creating the user on first
+sign-in). It's disabled until you supply your own OAuth **Web Client ID**.
 
-1. Create an OAuth 2.0 **Web** Client ID in Google Cloud Console → Credentials,
-   with your app origin in "Authorized JavaScript origins".
-2. Add the `google_sign_in` package and use it to obtain the Google **ID token**.
-3. POST that token to `POST /auth/google`; verify it server-side and issue your
-   own JWT.
-4. Build the `CompanyAdmin` from the verified response inside
-   `AuthRepository.loginWithGoogle` (the wiring point is marked with a comment).
-   Pass the client ID via `--dart-define=GOOGLE_CLIENT_ID=...`.
-
-> Real Google login requires your own OAuth Client ID (tied to your Google Cloud
-> project) and a backend to verify the token — it cannot be fully enabled from
-> the frontend alone.
+**To enable it, follow §5b in [SETUP.md](SETUP.md)** — create a Web OAuth Client
+ID, add your origins, then set `GOOGLE_CLIENT_ID` in the backend `.env` and pass
+`--dart-define=GOOGLE_CLIENT_ID=...` to `flutter run`. Without it, the button shows
+a "not configured" hint and email/password login still works. The client *secret*
+is not used (ID-token verification only needs the client ID).
 
 ## Run
 
-Flutter is not installed in the current Codex environment. Once Flutter is available locally:
+Full setup (backend + frontend) is in **[SETUP.md](SETUP.md)**. The short version,
+from the repo root:
 
 ```sh
-cd company_dashboard
-flutter doctor
+# 1. Backend + Postgres + Redis (needs Docker + the .env files — see SETUP.md §4)
+docker compose up -d --build
+
+# 2. Frontend (one line; add GOOGLE_CLIENT_ID to enable Google login)
 flutter pub get
-flutter run -d chrome
+flutter run -d chrome --web-port=5173 --dart-define=USE_BACKEND=true --dart-define=API_BASE_URL=http://localhost:8000
 ```
+
+Then open **http://localhost:5173**. API docs at **http://localhost:8000/docs**.
+
+To run the frontend standalone (no backend, browser-storage demo mode), omit the
+`--dart-define`s.
 
 ## Verify
 
 ```sh
-cd company_dashboard
 flutter analyze
 flutter test
 ```
 
-## Demo Login
+## First Login
 
-Use the prefilled credentials on the login screen, or enter any email and password. The demo session is stored in browser local storage.
+The database starts empty. Register an account via the API (password: 8+ chars
+with a letter and a number), then log in from the UI:
+
+```sh
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@mintflow.com","password":"demo1234","role":"company_admin"}'
+```
+
+(On Windows PowerShell use `curl.exe`.) Or use Google Sign-In once configured.
 
 ## YouTube Video Strategy
 
