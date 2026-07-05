@@ -6,6 +6,7 @@ psycopg2-binary
 redis
 python-jose[cryptography]
 passlib[bcrypt]
+email-validator
 python-dotenv
 pydantic-settings
 python-multipart
