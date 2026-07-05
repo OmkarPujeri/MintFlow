@@ -12,3 +12,21 @@ pubspec.lock
 
 # OS
 .DS_Store
+
+# Backend Environment & Secrets
+.env
+*.env
+backend/.env
+
+# Python Virtual Environments
+venv/
+.venv/
+ENV/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Database
+*.db
+*.sqlite
