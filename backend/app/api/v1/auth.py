@@ -5,9 +5,12 @@ from app.core.rate_limit import limiter
 from app.models.user import User, UserRole
 from app.models.wallet import Wallet
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from app.schemas.auth import RegisterRequest, LoginRequest, RegisterResponse, LoginResponse, RefreshRequest
+from app.schemas.auth import RegisterRequest, LoginRequest, RegisterResponse, LoginResponse, RefreshRequest, GoogleAuthRequest
 from app.config import settings
 from datetime import timedelta
+
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 
 router = APIRouter()
 
@@ -64,6 +67,56 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
         email=user.email,
         name="Company Admin",            # Will be updated when profile feature is added
         companyName="My Brand",          # Will be updated when profile feature is added
+        role=user.role,
+    )
+
+
+@router.post("/google", response_model=LoginResponse)
+@limiter.limit("10/minute")
+def google_auth(request: Request, payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+
+    # Verify signature, expiry, issuer, and that the token was minted for OUR app.
+    try:
+        claims = google_id_token.verify_oauth2_token(
+            payload.id_token,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
+
+    email = claims.get("email")
+    if not email or not claims.get("email_verified", False):
+        raise HTTPException(status_code=401, detail="Google account email not verified")
+
+    # Find existing user or provision a new company admin (no local password).
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(
+            email=email,
+            password_hash=None,
+            role=UserRole.company_admin,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is disabled")
+
+    access_token = create_access_token({"sub": str(user.id), "role": user.role})
+    refresh_token = create_refresh_token({"sub": str(user.id), "role": user.role})
+
+    return LoginResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        id=str(user.id),
+        email=user.email,
+        name=claims.get("name") or "Company Admin",
+        companyName="My Brand",           # Will be updated when profile feature is added
         role=user.role,
     )
 

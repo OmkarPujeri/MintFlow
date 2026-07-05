@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../repositories/api_client.dart';
 import '../theme.dart';
+import '../widgets/google_sign_in_button.dart';
 import '../widgets/section_card.dart';
 
 class LoginPage extends StatefulWidget {
@@ -14,7 +15,7 @@ class LoginPage extends StatefulWidget {
   });
 
   final Future<void> Function(String email, String password) onLogin;
-  final Future<void> Function() onGoogleLogin;
+  final Future<void> Function(String idToken) onGoogleLogin;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -80,10 +81,10 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _google() async {
+  Future<void> _google(String idToken) async {
     setState(() => _googleLoading = true);
     try {
-      await widget.onGoogleLogin();
+      await widget.onGoogleLogin(idToken);
     } catch (error) {
       _showError(_friendlyAuthError(error));
     } finally {
@@ -254,20 +255,6 @@ class _HeroStat extends StatelessWidget {
   }
 }
 
-/// The official multi-colour Google "G" mark.
-class _GoogleGlyph extends StatelessWidget {
-  const _GoogleGlyph();
-
-  @override
-  Widget build(BuildContext context) {
-    return SvgPicture.asset(
-      'assets/google_logo.svg',
-      width: 18,
-      height: 18,
-    );
-  }
-}
-
 class _LoginCard extends StatelessWidget {
   const _LoginCard({
     required this.emailController,
@@ -283,7 +270,7 @@ class _LoginCard extends StatelessWidget {
   final bool loading;
   final bool googleLoading;
   final VoidCallback onSubmit;
-  final VoidCallback onGoogle;
+  final Future<void> Function(String idToken) onGoogle;
 
   @override
   Widget build(BuildContext context) {
@@ -356,25 +343,15 @@ class _LoginCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: googleLoading ? null : onGoogle,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                side: const BorderSide(color: AppColors.line),
-                foregroundColor: AppColors.ink,
-              ),
-              icon: googleLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const _GoogleGlyph(),
-              label: const Text('Continue with Google'),
-            ),
+          // Google's official rendered button (Google Identity Services).
+          Align(
+            alignment: Alignment.center,
+            child: GoogleSignInButton(onIdToken: onGoogle),
           ),
+          if (googleLoading) ...const [
+            SizedBox(height: 12),
+            LinearProgressIndicator(minHeight: 2),
+          ],
           const SizedBox(height: 16),
           const Center(
             child: Text(

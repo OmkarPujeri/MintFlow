@@ -40,19 +40,24 @@ class AuthRepository {
     return admin;
   }
 
-  /// Google Sign-In — still demo for now.
-  /// To go live: obtain Google ID token, POST to /api/v1/auth/google, 
-  /// then call _api.saveToken() with the returned access_token.
-  Future<CompanyAdmin> loginWithGoogle({
-    String? name,
-    String? email,
-    String? companyName,
-  }) async {
+  /// Real Google Sign-In: exchange the Google ID token (obtained on the client
+  /// by Google Identity Services) for our own app JWT via the backend, which
+  /// verifies the token and finds-or-creates the user.
+  Future<CompanyAdmin> loginWithGoogle(String googleIdToken) async {
+    final response = await _api.post('/api/v1/auth/google', body: {
+      'id_token': googleIdToken,
+    });
+
+    _api.saveToken(response['access_token'] as String);
+
     final admin = CompanyAdmin(
-      id: 'admin-google-demo',
-      name: name ?? 'Google Company Admin',
-      email: email ?? 'admin@gmail.com',
-      companyName: companyName ?? 'MintFlow Demo Brand',
+      id: response['id'] as String,
+      name: response['name'] as String? ?? 'Company Admin',
+      email: response['email'] as String,
+      companyName: response['companyName'] as String? ?? 'My Brand',
+      brandBio: response['brandBio'] as String? ?? '',
+      brandWebsite: response['brandWebsite'] as String? ?? '',
+      brandLogoUrl: response['brandLogoUrl'] as String? ?? '',
     );
     _storage.write(_sessionKey, jsonEncode(admin.toJson()));
     return admin;

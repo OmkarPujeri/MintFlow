@@ -20,6 +20,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-development}
       DEBUG: ${DEBUG:-False}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     # Apply migrations, then start the API.
     command: sh -c "cd /app && alembic upgrade head && cd /app/backend && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:

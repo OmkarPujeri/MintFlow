@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Google Sign-In — Web OAuth Client ID (from Google Cloud Console → Credentials).
+    # Incoming Google ID tokens must have this as their `aud`. Empty = Google login disabled.
+    GOOGLE_CLIENT_ID: str = ""
+
     # JWT
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24

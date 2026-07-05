@@ -76,8 +76,8 @@ class _MintFlowDashboardAppState extends State<MintFlowDashboardApp> {
     });
   }
 
-  Future<void> _loginWithGoogle() async {
-    final admin = await _authRepository.loginWithGoogle();
+  Future<void> _loginWithGoogle(String idToken) async {
+    final admin = await _authRepository.loginWithGoogle(idToken);
     setState(() {
       _admin = admin;
       _controller = _buildController(admin);

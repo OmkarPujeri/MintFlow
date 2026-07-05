@@ -50,3 +50,8 @@ class LoginResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class GoogleAuthRequest(BaseModel):
+    """The Google ID token (JWT) obtained by the frontend from Google Sign-In."""
+    id_token: str
