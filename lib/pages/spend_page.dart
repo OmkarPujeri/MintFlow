@@ -49,7 +49,7 @@ class SpendPage extends StatelessWidget {
           builder: (context, constraints) {
             final wide = constraints.maxWidth > 900;
             final health = _BudgetHealthCard(spend: spend);
-            final trend = _SpendTrendCard(points: controller.completionTrend);
+            final trend = _SpendTrendCard(points: controller.spendTrend);
             if (!wide) {
               return Column(
                 children: [health, const SizedBox(height: 18), trend],

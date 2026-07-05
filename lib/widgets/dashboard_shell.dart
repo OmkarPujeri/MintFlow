@@ -189,6 +189,16 @@ class _DashboardShellState extends State<DashboardShell> {
                           child: AnimatedSwitcher(
                             duration: AppMotion.medium,
                             switchInCurve: AppMotion.curve,
+                            // Top-align: the default layoutBuilder centers its
+                            // Stack, which vertically-centers short pages (empty
+                            // states) leaving a dead gap under the header.
+                            layoutBuilder: (current, previous) => Stack(
+                              alignment: Alignment.topCenter,
+                              children: [
+                                ...previous,
+                                if (current != null) current,
+                              ],
+                            ),
                             transitionBuilder: (child, animation) {
                               return FadeTransition(
                                 opacity: animation,
@@ -446,64 +456,94 @@ class _NavItemState extends State<_NavItem> {
       ],
     );
 
-    return MouseRegion(
+    final item = MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: Tooltip(
-        message: widget.compact ? widget.section.label : '',
-        child: GestureDetector(
-          onTap: () => widget.onSelect(widget.section),
-          child: AnimatedContainer(
-            duration: AppMotion.fast,
-            curve: AppMotion.curve,
-            margin: const EdgeInsets.only(bottom: 6),
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.compact ? 0 : 12,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              color: selected
-                  ? AppColors.mintSoft
-                  : (active ? AppColors.lineSoft : Colors.transparent),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: content,
+      child: GestureDetector(
+        onTap: () => widget.onSelect(widget.section),
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          curve: AppMotion.curve,
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.compact ? 0 : 12,
+            vertical: 12,
           ),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.mintSoft
+                : (active ? AppColors.lineSoft : Colors.transparent),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: content,
         ),
       ),
     );
+
+    // Only the icon-only rail needs a tooltip. An empty tooltip in the expanded
+    // sidebar renders a stray dark box on hover.
+    return widget.compact
+        ? Tooltip(message: widget.section.label, child: item)
+        : item;
   }
 }
 
-class _LogoutItem extends StatelessWidget {
+class _LogoutItem extends StatefulWidget {
   const _LogoutItem({required this.compact, required this.onLogout});
 
   final bool compact;
   final Future<void> Function() onLogout;
 
   @override
+  State<_LogoutItem> createState() => _LogoutItemState();
+}
+
+class _LogoutItemState extends State<_LogoutItem> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return MouseRegion(
+    final color = _hovered ? AppColors.danger : AppColors.muted;
+
+    final item = MouseRegion(
       cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTap: onLogout,
-        child: Container(
+        onTap: widget.onLogout,
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          curve: AppMotion.curve,
           padding: EdgeInsets.symmetric(
-            horizontal: compact ? 0 : 12,
+            horizontal: widget.compact ? 0 : 12,
             vertical: 12,
           ),
+          decoration: BoxDecoration(
+            color: _hovered ? AppColors.dangerSoft : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: _hovered
+                ? [
+                    BoxShadow(
+                      color: AppColors.danger.withValues(alpha: 0.18),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          ),
           child: Row(
-            mainAxisAlignment:
-                compact ? MainAxisAlignment.center : MainAxisAlignment.start,
+            mainAxisAlignment: widget.compact
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.start,
             children: [
-              const Icon(Icons.logout, size: 20, color: AppColors.muted),
-              if (!compact) ...[
+              Icon(Icons.logout, size: 20, color: color),
+              if (!widget.compact) ...[
                 const SizedBox(width: 12),
-                const Text(
+                Text(
                   'Logout',
                   style: TextStyle(
-                    color: AppColors.muted,
+                    color: color,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -514,6 +554,10 @@ class _LogoutItem extends StatelessWidget {
         ),
       ),
     );
+
+    return widget.compact
+        ? Tooltip(message: 'Logout', child: item)
+        : item;
   }
 }
 

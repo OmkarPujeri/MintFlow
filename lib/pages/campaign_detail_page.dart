@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../core/constants.dart';
 import '../formatters.dart';
 import '../models/campaign.dart';
 import '../models/insights.dart';
@@ -918,10 +919,11 @@ class _FinancialCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double budgetVal = campaign.budget;
-    final platformFee = budgetVal * 0.20;
-    final userPool = budgetVal * 0.80;
-    final totalCoins = userPool / 0.75;
-    final costPerView = campaign.rewardPerCompletion * (0.75 / 0.80);
+    final platformFee = budgetVal * MintEconomics.platformFeeRate;
+    final userPool = budgetVal * MintEconomics.viewerPoolRate;
+    final totalCoins = userPool / MintEconomics.coinValueInr;
+    final costPerView = campaign.rewardPerCompletion *
+        (MintEconomics.coinValueInr / MintEconomics.viewerPoolRate);
 
     return SectionCard(
       child: Column(

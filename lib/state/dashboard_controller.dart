@@ -46,6 +46,7 @@ class DashboardController extends ChangeNotifier {
   List<RewardTransaction> _transactions = [];
   List<DashboardMetric> _metrics = [];
   List<TimeSeriesPoint> _completionTrend = [];
+  List<TimeSeriesPoint> _spendTrend = [];
   Map<InteractionType, int> _interactionMix = {};
   SpendSummary _spend = const SpendSummary(allocated: 0, spent: 0);
 
@@ -61,6 +62,7 @@ class DashboardController extends ChangeNotifier {
   List<RewardTransaction> get transactions => _transactions;
   List<DashboardMetric> get metrics => _metrics;
   List<TimeSeriesPoint> get completionTrend => _completionTrend;
+  List<TimeSeriesPoint> get spendTrend => _spendTrend;
   Map<InteractionType, int> get interactionMix => _interactionMix;
   SpendSummary get spend => _spend;
   String get search => _search;
@@ -129,6 +131,7 @@ class DashboardController extends ChangeNotifier {
     _transactions = await _campaigns.listRewardTransactions(null);
     _metrics = await _analytics.getDashboardMetrics(campaigns);
     _completionTrend = await _analytics.getCompletionTrend(campaigns);
+    _spendTrend = await _analytics.getSpendTrend(campaigns);
     _interactionMix = await _analytics.getInteractionMix(campaigns);
     _spend = await _analytics.getSpendSummary(campaigns);
   }

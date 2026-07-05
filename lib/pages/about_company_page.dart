@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/validators.dart';
 import '../models/company_admin.dart';
 import '../state/dashboard_controller.dart';
 import '../theme.dart';
@@ -119,16 +120,22 @@ class _AboutCompanyPageState extends State<AboutCompanyPage> {
                           controller: _brandWebsite,
                           decoration: const InputDecoration(
                             labelText: 'Brand Website URL',
+                            hintText: 'https://yourbrand.com',
                             prefixIcon: Icon(Icons.language_outlined),
                           ),
+                          keyboardType: TextInputType.url,
+                          validator: optionalUrlError,
                         ),
                         const SizedBox(height: 14),
                         TextFormField(
                           controller: _brandLogoUrl,
                           decoration: const InputDecoration(
                             labelText: 'Brand Logo URL',
+                            hintText: 'https://…/logo.png',
                             prefixIcon: Icon(Icons.image_outlined),
                           ),
+                          keyboardType: TextInputType.url,
+                          validator: optionalUrlError,
                         ),
                         const SizedBox(height: 14),
                         TextFormField(
@@ -169,7 +176,8 @@ class _AboutCompanyPageState extends State<AboutCompanyPage> {
                                   labelText: 'Admin Email',
                                   prefixIcon: Icon(Icons.mail_outline),
                                 ),
-                                validator: (v) => v == null || !v.contains('@') ? 'Enter a valid email' : null,
+                                keyboardType: TextInputType.emailAddress,
+                                validator: emailError,
                               ),
                             ),
                           ],
@@ -205,6 +213,10 @@ class _AboutCompanyPageState extends State<AboutCompanyPage> {
                                 backgroundImage: _brandLogoUrl.text.trim().isNotEmpty
                                     ? NetworkImage(_brandLogoUrl.text.trim())
                                     : null,
+                                onBackgroundImageError:
+                                    _brandLogoUrl.text.trim().isNotEmpty
+                                        ? (_, __) {}
+                                        : null,
                                 child: _brandLogoUrl.text.trim().isEmpty
                                     ? Text(
                                         _companyName.text.isNotEmpty
@@ -256,13 +268,15 @@ class _AboutCompanyPageState extends State<AboutCompanyPage> {
               if (wide) {
                 return Column(
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 3, child: formContent),
-                        const SizedBox(width: 20),
-                        Expanded(flex: 2, child: previewContent),
-                      ],
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(flex: 3, child: formContent),
+                          const SizedBox(width: 20),
+                          Expanded(flex: 2, child: previewContent),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 20),
                     Row(

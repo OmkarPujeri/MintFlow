@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/insights.dart';
 import '../../theme.dart';
+import 'chart_placeholder.dart';
 
 /// Smooth area line chart for a rewarded-view / completion trend.
 class TrendAreaChart extends StatelessWidget {
@@ -13,8 +14,14 @@ class TrendAreaChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (points.isEmpty) {
-      return SizedBox(height: height);
+    // Empty OR all-zero (the repo always emits a full series) → placeholder
+    // instead of a flat line pinned to the axis.
+    if (points.isEmpty || !points.any((p) => p.value > 0)) {
+      return ChartPlaceholder(
+        icon: Icons.show_chart,
+        message: 'No activity in this period yet.',
+        height: height,
+      );
     }
 
     final spots = <FlSpot>[

@@ -24,7 +24,7 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+        padding: const EdgeInsets.only(top: 24, bottom: 32, left: 24, right: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

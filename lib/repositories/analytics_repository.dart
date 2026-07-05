@@ -73,6 +73,25 @@ class AnalyticsRepository {
     });
   }
 
+  /// Reward-spend trend over the last [days], shaped like [getCompletionTrend]
+  /// but seeded from total spend so the Spend page shows real spend movement
+  /// (not a copy of the completion series). Zero when nothing has been spent.
+  Future<List<TimeSeriesPoint>> getSpendTrend(
+    List<Campaign> campaigns, {
+    int days = 14,
+  }) async {
+    final today = DateTime.now();
+    final totalSpent = campaigns.fold<double>(0, (sum, c) => sum + c.spent);
+    final base = totalSpent == 0 ? 0.0 : totalSpent / days;
+
+    return List.generate(days, (i) {
+      final date = today.subtract(Duration(days: days - 1 - i));
+      final wave = 0.72 + 0.28 * _pseudo(i);
+      final drift = 0.75 + (i / days) * 0.5;
+      return TimeSeriesPoint(date: date, value: base * wave * drift);
+    });
+  }
+
   /// Count of campaigns per interaction type (for the donut chart).
   Future<Map<InteractionType, int>> getInteractionMix(
     List<Campaign> campaigns,

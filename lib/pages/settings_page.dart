@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/validators.dart';
 import '../models/company_admin.dart';
 import '../state/dashboard_controller.dart';
 import '../theme.dart';
@@ -109,7 +110,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           labelText: 'Admin email',
                           prefixIcon: Icon(Icons.mail_outline),
                         ),
-                        validator: _email$,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: emailError,
                       ),
                     ],
                   ),
@@ -133,7 +135,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           'Notify me when campaigns cross 80% budget spend',
                         ),
                         subtitle: const Text(
-                          'Becomes a backend notification rule later.',
+                          'Get alerted before a campaign exhausts its budget.',
                         ),
                       ),
                     ],
@@ -172,9 +174,4 @@ class _SettingsPageState extends State<SettingsPage> {
     return null;
   }
 
-  String? _email$(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Required';
-    if (!value.contains('@')) return 'Enter a valid email';
-    return null;
-  }
 }

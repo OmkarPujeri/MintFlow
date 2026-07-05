@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../core/constants.dart';
 import '../formatters.dart';
 import '../models/campaign.dart';
 import '../state/dashboard_controller.dart';
@@ -522,6 +523,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                         child: TextFormField(
                           controller: slide.urlController,
                           decoration: InputDecoration(
+                            labelText:
+                                slide.type == 'video' ? 'YouTube URL' : 'Image URL',
                             hintText: slide.type == 'video'
                                 ? 'Paste YouTube video URL'
                                 : 'Paste direct image URL',
@@ -585,10 +588,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 Expanded(
                   child: TextFormField(
                     controller: _reward,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Reward / completion (Mint Coins 🪙)',
-                      helperText: '1 Coin = Rs. 0.75',
-                      prefixIcon: Icon(Icons.payments_outlined),
+                      helperText:
+                          '1 Coin = ${formatCurrency(MintEconomics.coinValueInr, decimals: 2)}',
+                      prefixIcon: const Icon(Icons.payments_outlined),
                     ),
                     keyboardType: TextInputType.number,
                     validator: _number,
@@ -602,11 +606,18 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 final double budgetVal = double.tryParse(_budget.text) ?? 0.0;
                 final double rewardVal = double.tryParse(_reward.text) ?? 0.0;
 
-                final platformFee = budgetVal * 0.20;
-                final userPool = budgetVal * 0.80;
-                final totalCoins = userPool / 0.75;
-                final estViews = rewardVal > 0 ? (totalCoins / rewardVal).floor() : 0;
-                final costPerView = rewardVal * (0.75 / 0.80);
+                final feePct = (MintEconomics.platformFeeRate * 100).round();
+                final poolPct = (MintEconomics.viewerPoolRate * 100).round();
+                final fee = budgetVal * MintEconomics.platformFeeRate;
+                final pool = budgetVal * MintEconomics.viewerPoolRate;
+                final totalCoins = pool / MintEconomics.coinValueInr;
+                final estViews =
+                    rewardVal > 0 ? (totalCoins / rewardVal).floor() : 0;
+                final viewerEarns = rewardVal * MintEconomics.coinValueInr;
+                // Effective advertiser cost per verified view (== budget / views).
+                final cpv = rewardVal *
+                    (MintEconomics.coinValueInr / MintEconomics.viewerPoolRate);
+                final cpm = cpv * 1000;
 
                 return Container(
                   padding: const EdgeInsets.all(16),
@@ -647,54 +658,36 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                       const SizedBox(height: 12),
                       const Divider(color: Colors.white24, height: 1),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Advertiser Deposit:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          Text('Rs. ${budgetVal.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Platform Fee (20%):', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          Text('Rs. ${platformFee.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Viewer Payout Pool (80%):', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          Text('Rs. ${userPool.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Total Coins Issued:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          Text('${totalCoins.toStringAsFixed(0)} Coins 🪙', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
+                      _CalcRow('Budget', formatCurrency(budgetVal)),
+                      _CalcRow('Platform fee ($feePct%)',
+                          '- ${formatCurrency(fee)}'),
+                      _CalcRow('Viewer payout pool ($poolPct%)',
+                          formatCurrency(pool)),
+                      const SizedBox(height: 10),
                       const Divider(color: Colors.white24, height: 1),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Estimated Verified Views:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          Text('$estViews Views', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                        ],
+                      const SizedBox(height: 10),
+                      _CalcRow(
+                        'Reward / view',
+                        rewardVal > 0
+                            ? '${formatCoins(rewardVal)}  (${formatCurrency(viewerEarns, decimals: 2)})'
+                            : '—',
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Paid Per View:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          Text('Rs. ${costPerView.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        ],
+                      _CalcRow('Est. verified views', '$estViews',
+                          emphasize: true),
+                      _CalcRow('Effective CPV',
+                          rewardVal > 0 ? formatCurrency(cpv, decimals: 2) : '—'),
+                      _CalcRow('Effective CPM',
+                          rewardVal > 0 ? formatCurrency(cpm) : '—'),
+                      _CalcRow('Viewer earns / view',
+                          rewardVal > 0
+                              ? formatCurrency(viewerEarns, decimals: 2)
+                              : '—'),
+                      const SizedBox(height: 10),
+                      Text(
+                        'CPV is your effective cost per verified view. Viewers are '
+                        'paid from the $poolPct% pool at ${formatCurrency(MintEconomics.coinValueInr, decimals: 2)}/coin.',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 11, height: 1.4),
                       ),
                     ],
                   ),
@@ -750,7 +743,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                           controller: _targetAgeMin,
                           decoration: const InputDecoration(labelText: 'Min Age'),
                           keyboardType: TextInputType.number,
-                          validator: _number,
+                          validator: _age,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -761,7 +754,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                           controller: _targetAgeMax,
                           decoration: const InputDecoration(labelText: 'Max Age'),
                           keyboardType: TextInputType.number,
-                          validator: _number,
+                          validator: _maxAge,
                         ),
                       ),
                     ],
@@ -895,6 +888,25 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     }
     return null;
   }
+
+  /// Whole number in [13, 100]. Used for both age bounds.
+  String? _age(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required';
+    final n = int.tryParse(value.trim());
+    if (n == null) return 'Whole number only';
+    if (n < 13 || n > 100) return '13–100';
+    return null;
+  }
+
+  /// Max age: a valid age AND not below the min age.
+  String? _maxAge(String? value) {
+    final base = _age(value);
+    if (base != null) return base;
+    final min = int.tryParse(_targetAgeMin.text.trim());
+    final max = int.tryParse(value!.trim());
+    if (min != null && max != null && max < min) return 'Max < min';
+    return null;
+  }
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -914,6 +926,37 @@ class _SectionLabel extends StatelessWidget {
           fontSize: 11.5,
           letterSpacing: 0.6,
         ),
+      ),
+    );
+  }
+}
+
+/// A label/value line inside the budget-split calculator card.
+class _CalcRow extends StatelessWidget {
+  const _CalcRow(this.label, this.value, {this.emphasize = false});
+
+  final String label;
+  final String value;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: emphasize ? 15 : 13,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1119,15 +1162,29 @@ class _MobilePreviewState extends State<_MobilePreview> {
           },
         );
       }
+      // Empty URL → neutral "add a video" prompt; a non-empty but unparseable
+      // URL → an actual error hint.
+      final isEmpty = url.isEmpty;
       return Container(
         color: Colors.black,
         alignment: Alignment.center,
-        child: const Column(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.video_library_outlined, color: Colors.white54, size: 36),
-            SizedBox(height: 8),
-            Text('Invalid Video Slide', style: TextStyle(color: Colors.white70)),
+            Icon(
+              isEmpty
+                  ? Icons.play_circle_outline
+                  : Icons.error_outline,
+              color: Colors.white54,
+              size: 36,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isEmpty ? 'Add a video URL to preview' : 'Invalid YouTube link',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70),
+            ),
           ],
         ),
       );
@@ -1345,7 +1402,7 @@ class _MobilePreviewState extends State<_MobilePreview> {
                                     builder: (context, _) => FilledButton(
                                       onPressed: () {},
                                       child: Text(
-                                        'Complete & Earn ${widget.reward.text.isEmpty ? '5' : widget.reward.text} Coins',
+                                        'Complete & Earn ${widget.reward.text.isEmpty ? '2' : widget.reward.text} Coins',
                                       ),
                                     ),
                                   ),

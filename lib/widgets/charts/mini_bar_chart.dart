@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme.dart';
+import 'chart_placeholder.dart';
 
 class BarDatum {
   const BarDatum({required this.label, required this.value});
@@ -19,7 +20,15 @@ class MiniBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) return SizedBox(height: height);
+    // Empty OR all-zero values → placeholder instead of invisible bars with
+    // stray axis labels.
+    if (data.isEmpty || !data.any((d) => d.value > 0)) {
+      return ChartPlaceholder(
+        icon: Icons.bar_chart,
+        message: 'No spend recorded yet.',
+        height: height,
+      );
+    }
 
     final maxY =
         data.map((d) => d.value).fold<double>(0, (m, v) => v > m ? v : m) *
