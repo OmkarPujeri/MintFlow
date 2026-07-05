@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 import bcrypt
 from app.config import settings
@@ -32,3 +32,25 @@ def decode_token(token: str) -> dict:
         return payload
     except JWTError:
         return None
+
+
+def remaining_ttl(payload: dict) -> int:
+    """Seconds until this token's own expiry (0 if expired / no exp).
+
+    Used as the blacklist TTL so Redis auto-evicts a revocation once the token
+    would have expired anyway — the blacklist never grows unbounded.
+    """
+    exp = payload.get("exp") if payload else None
+    if not exp:
+        return 0
+    return max(0, int(exp - datetime.now(timezone.utc).timestamp()))
+
+
+if __name__ == "__main__":
+    # ponytail: self-check the TTL math instead of a pytest+Redis harness.
+    _now = datetime.now(timezone.utc).timestamp()
+    assert remaining_ttl({"exp": _now + 100}) > 90
+    assert remaining_ttl({"exp": _now - 100}) == 0
+    assert remaining_ttl({}) == 0
+    assert remaining_ttl(None) == 0
+    print("security self-check ok")

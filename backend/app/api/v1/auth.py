@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from app.dependencies import get_db, get_current_user, redis_client
+from typing import Optional
+from app.dependencies import get_db, get_current_user, redis_client, blacklist_token, oauth2_scheme
 from app.core.rate_limit import limiter
 from app.models.user import User, UserRole
 from app.models.wallet import Wallet
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from app.schemas.auth import RegisterRequest, LoginRequest, RegisterResponse, LoginResponse, RefreshRequest, GoogleAuthRequest
+from app.schemas.auth import RegisterRequest, LoginRequest, RegisterResponse, LoginResponse, RefreshRequest, LogoutRequest, GoogleAuthRequest
 from app.config import settings
 from datetime import timedelta
 
@@ -130,13 +131,27 @@ def refresh_token(payload: RefreshRequest):
     if redis_client.get(f"blacklist:{payload.refresh_token}"):
         raise HTTPException(status_code=401, detail="Refresh token has been revoked")
 
-    new_access_token = create_access_token({
-        "sub": token_data["sub"],
-        "role": token_data["role"]
-    })
-    return {"access_token": new_access_token, "token_type": "bearer"}
+    # Rotate: revoke the presented refresh token and mint a fresh pair, so a
+    # leaked refresh token can't be replayed once it's been used.
+    blacklist_token(payload.refresh_token)
+    new_access_token = create_access_token({"sub": token_data["sub"], "role": token_data["role"]})
+    new_refresh_token = create_refresh_token({"sub": token_data["sub"], "role": token_data["role"]})
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+    }
 
 
 @router.post("/logout")
-def logout(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def logout(
+    payload: Optional[LogoutRequest] = None,
+    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
+):
+    # Revoke the access token used for this request; also the refresh token if
+    # the client sends it. Both stay blacklisted until their own expiry.
+    blacklist_token(token)
+    if payload and payload.refresh_token:
+        blacklist_token(payload.refresh_token)
     return {"message": "Logged out successfully"}

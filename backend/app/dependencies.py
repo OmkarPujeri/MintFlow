@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.db.database import SessionLocal
-from app.core.security import decode_token
+from app.core.security import decode_token, remaining_ttl
 from app.models.user import User, UserRole
 import redis
 from app.config import settings
@@ -10,6 +10,13 @@ from app.config import settings
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+
+
+def blacklist_token(token: str) -> None:
+    """Revoke a JWT until its natural expiry. No-op for undecodable/expired tokens."""
+    ttl = remaining_ttl(decode_token(token))
+    if ttl > 0:
+        redis_client.setex(f"blacklist:{token}", ttl, "1")
 
 
 def get_db():

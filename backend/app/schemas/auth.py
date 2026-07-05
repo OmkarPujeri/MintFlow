@@ -52,6 +52,13 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class LogoutRequest(BaseModel):
+    # Optional: the frontend currently only holds the access token (revoked via
+    # the Authorization header), but a client that stores the refresh token can
+    # send it here to revoke that too.
+    refresh_token: str | None = None
+
+
 class GoogleAuthRequest(BaseModel):
     """The Google ID token (JWT) obtained by the frontend from Google Sign-In."""
     id_token: str
