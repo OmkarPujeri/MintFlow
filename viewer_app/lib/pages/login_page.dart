@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../state/viewer_controller.dart';
-import '../theme.dart';
 import '../widgets/google_sign_in_button.dart';
+import '../widgets/mint_coin.dart';
 
 /// Login + register (toggle) for viewers. On success the root shell rebuilds
 /// via the controller — this page doesn't navigate itself.
@@ -46,7 +46,24 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
+      body: Stack(
+        children: [
+          // ambient mint glow behind the brand mark
+          Positioned(
+            top: -140,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 320,
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [Color(0x3346E39B), Color(0x0046E39B)],
+                  radius: 0.7,
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -175,6 +192,8 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
       ),
+        ],
+      ),
     );
   }
 }
@@ -182,17 +201,6 @@ class _LoginPageState extends State<LoginPage> {
 class _Logo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          gradient: AppColors.brandGradient,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: AppShadows.lifted,
-        ),
-        child: const Icon(Icons.eco_rounded, color: Colors.white, size: 34),
-      ),
-    );
+    return const Center(child: MintCoin(size: 76));
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/campaign.dart';
 import '../state/viewer_controller.dart';
 import '../theme.dart';
+import '../widgets/mint_coin.dart';
 
 /// Discover: all active campaigns from every company, as a scrollable card
 /// list, sortable by payout or newest. Tapping a campaign starts the watch
@@ -20,7 +21,6 @@ class _FeedPageState extends State<FeedPage> {
   @override
   void initState() {
     super.initState();
-    // Load once when the tab first mounts.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.controller.feedCampaigns.isEmpty) widget.controller.loadFeed();
     });
@@ -38,6 +38,8 @@ class _FeedPageState extends State<FeedPage> {
             Expanded(
               child: RefreshIndicator(
                 onRefresh: c.loadFeed,
+                color: AppColors.mintBright,
+                backgroundColor: AppColors.panelAlt,
                 child: _body(context, c),
               ),
             ),
@@ -53,8 +55,9 @@ class _FeedPageState extends State<FeedPage> {
     }
     if (c.feedError != null && c.feedCampaigns.isEmpty) {
       return _Message(
-        icon: Icons.wifi_off,
+        icon: Icons.wifi_off_rounded,
         title: c.feedError!,
+        subtitle: 'Pull to refresh, or try again.',
         actionLabel: 'Retry',
         onAction: c.loadFeed,
       );
@@ -62,13 +65,13 @@ class _FeedPageState extends State<FeedPage> {
     final items = c.feedCampaigns;
     if (items.isEmpty) {
       return const _Message(
-        icon: Icons.inbox_outlined,
+        icon: Icons.inbox_rounded,
         title: 'No campaigns right now',
-        subtitle: 'Check back soon — new campaigns appear here.',
+        subtitle: 'New ways to earn appear here — check back soon.',
       );
     }
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
       itemCount: items.length,
       itemBuilder: (context, i) => _CampaignCard(
         campaign: items[i],
@@ -89,41 +92,45 @@ class _SortBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final count = controller.feedCampaigns.length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 10, 6),
+      padding: const EdgeInsets.fromLTRB(20, 6, 12, 8),
       child: Row(
         children: [
-          if (count > 0)
-            Text(
-              '$count campaign${count == 1 ? '' : 's'}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Earn by watching',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.mintBright,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3)),
+              if (count > 0)
+                Text('$count campaign${count == 1 ? '' : 's'} available',
+                    style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
           const Spacer(),
           PopupMenuButton<FeedSort>(
             initialValue: controller.sort,
             onSelected: controller.setSort,
             position: PopupMenuPosition.under,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: AppColors.line),
-            ),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.panel,
+                color: AppColors.panelAlt,
                 borderRadius: BorderRadius.circular(AppRadii.pill),
                 border: Border.all(color: AppColors.line),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.sort, size: 16, color: AppColors.mintDark),
+                  const Icon(Icons.sort_rounded, size: 16, color: AppColors.mintBright),
                   const SizedBox(width: 6),
                   Text(controller.sort.label,
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
-                          ?.copyWith(color: AppColors.ink)),
-                  const Icon(Icons.arrow_drop_down, size: 20, color: AppColors.muted),
+                          ?.copyWith(color: AppColors.ink, fontWeight: FontWeight.w600)),
+                  const Icon(Icons.expand_more_rounded, size: 18, color: AppColors.muted),
                 ],
               ),
             ),
@@ -137,60 +144,79 @@ class _SortBar extends StatelessWidget {
   }
 }
 
-class _CampaignCard extends StatelessWidget {
+/// Card with a subtle press-scale so tapping feels tactile.
+class _CampaignCard extends StatefulWidget {
   const _CampaignCard({required this.campaign, required this.onTap});
 
   final Campaign campaign;
   final VoidCallback onTap;
 
   @override
+  State<_CampaignCard> createState() => _CampaignCardState();
+}
+
+class _CampaignCardState extends State<_CampaignCard> {
+  bool _down = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      decoration: BoxDecoration(
-        color: AppColors.panel,
-        borderRadius: BorderRadius.circular(AppRadii.card),
-        boxShadow: AppShadows.card,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Thumbnail(videoId: campaign.youtubeVideoId, boosted: campaign.isBoosted),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          campaign.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        if (campaign.description.isNotEmpty) ...[
-                          const SizedBox(height: 2),
+    final campaign = widget.campaign;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _down = true),
+      onTapCancel: () => setState(() => _down = false),
+      onTapUp: (_) => setState(() => _down = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _down ? 0.98 : 1,
+        duration: AppMotion.fast,
+        curve: Curves.easeOut,
+        child: Container(
+          margin: const EdgeInsets.only(top: 14),
+          decoration: BoxDecoration(
+            color: AppColors.panel,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(color: AppColors.lineSoft),
+            boxShadow: AppShadows.card,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Thumbnail(videoId: campaign.youtubeVideoId, boosted: campaign.isBoosted),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            campaign.description,
-                            maxLines: 2,
+                            campaign.name,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
+                          if (campaign.description.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              campaign.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  _PayoutBadge(coins: campaign.rewardPerCompletion),
-                ],
+                    const SizedBox(width: 14),
+                    _Payout(coins: campaign.rewardPerCompletion),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -218,23 +244,42 @@ class _Thumbnail extends StatelessWidget {
             )
           else
             const _ThumbFallback(),
+          // bottom scrim so the play cue and badges stay legible over any frame
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Color(0x88000000)],
+                stops: [0.55, 1.0],
+              ),
+            ),
+          ),
+          // play affordance
+          const Center(
+            child: _PlayCue(),
+          ),
           if (boosted)
             Positioned(
-              top: 10,
-              left: 10,
+              top: 12,
+              left: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
+                  color: AppColors.amberSoft,
                   borderRadius: BorderRadius.circular(AppRadii.pill),
+                  border: Border.all(color: AppColors.amber.withValues(alpha: 0.5)),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.star, size: 13, color: AppColors.amber),
-                    SizedBox(width: 4),
+                    Icon(Icons.bolt_rounded, size: 14, color: AppColors.amber),
+                    SizedBox(width: 3),
                     Text('Boosted',
-                        style: TextStyle(color: Colors.white, fontSize: 11)),
+                        style: TextStyle(
+                            color: AppColors.amber,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800)),
                   ],
                 ),
               ),
@@ -245,45 +290,55 @@ class _Thumbnail extends StatelessWidget {
   }
 }
 
+class _PlayCue extends StatelessWidget {
+  const _PlayCue();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 54,
+      height: 54,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.32),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.5),
+      ),
+      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
+    );
+  }
+}
+
 class _ThumbFallback extends StatelessWidget {
   const _ThumbFallback();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(gradient: AppColors.brandGradient),
-      child: const Center(
-        child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 48),
-      ),
+    return const DecoratedBox(
+      decoration: BoxDecoration(gradient: AppColors.brandGradient),
     );
   }
 }
 
-class _PayoutBadge extends StatelessWidget {
-  const _PayoutBadge({required this.coins});
+class _Payout extends StatelessWidget {
+  const _Payout({required this.coins});
 
   final double coins;
 
   @override
   Widget build(BuildContext context) {
-    final value = coins % 1 == 0 ? coins.toInt().toString() : coins.toStringAsFixed(1);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.mintSoft,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-      ),
-      child: Column(
-        children: [
-          Text(value,
-              style: const TextStyle(
-                  color: AppColors.mintDeep,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16)),
-          const Text('coins',
-              style: TextStyle(color: AppColors.mintDark, fontSize: 10.5)),
-        ],
-      ),
+    final value =
+        coins % 1 == 0 ? coins.toInt().toString() : coins.toStringAsFixed(1);
+    return Column(
+      children: [
+        MintCoin(size: 48, value: value),
+        const SizedBox(height: 5),
+        const Text('coins',
+            style: TextStyle(
+                color: AppColors.mintBright,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3)),
+      ],
     );
   }
 }
@@ -308,20 +363,34 @@ class _Message extends StatelessWidget {
     // ListView so RefreshIndicator still works when the list is empty.
     return ListView(
       children: [
-        SizedBox(height: MediaQuery.of(context).size.height * 0.25),
-        Icon(icon, size: 52, color: AppColors.faint),
-        const SizedBox(height: 12),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.22),
+        Container(
+          width: 84,
+          height: 84,
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.panel,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Icon(icon, size: 38, color: AppColors.faint),
+        ),
+        const SizedBox(height: 18),
         Text(title,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium),
         if (subtitle != null) ...[
-          const SizedBox(height: 4),
-          Text(subtitle!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(subtitle!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall),
+          ),
         ],
         if (actionLabel != null) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Center(
             child: OutlinedButton(onPressed: onAction, child: Text(actionLabel!)),
           ),
